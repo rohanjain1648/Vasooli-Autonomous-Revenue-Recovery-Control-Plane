@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: vasooli
+      POSTGRES_PASSWORD: vasooli
+      POSTGRES_DB: vasooli
+    ports:
+      - "5432:5432"
+    volumes:
+      - vasooli_pg_data:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - vasooli_redis_data:/data
+
+volumes:
+  vasooli_pg_data:
+  vasooli_redis_data:
