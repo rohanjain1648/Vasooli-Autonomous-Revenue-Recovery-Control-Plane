@@ -1,0 +1,34 @@
+# Email recovery outreach for failed/degraded payments.
+id: email-recovery-v1
+name: Email Recovery Outreach
+category: payment_failure
+cost_paise: 0 # infra-only cost, no per-send charge assumed
+
+arms:
+  - name: control
+    description: No email sent (holdout baseline within this playbook)
+    requires_approval: false
+
+  - name: email-reminder
+    description: Friendly payment retry reminder
+    requires_approval: false
+    template: |
+      Hi {{ customer_name }},
+
+      We noticed your recent payment of ₹{{ amount }} didn't go through
+      ({{ error_reason }}). You can retry here: {{ retry_link }}
+
+      Best,
+      {{ merchant_name }} Team
+
+  - name: email-offer
+    description: 2% one-time discount as a courtesy for high-value customers
+    requires_approval: true
+    template: |
+      Hi {{ customer_name }},
+
+      Your payment of ₹{{ amount }} needs attention. As a one-time courtesy,
+      we're offering 2% off: {{ offer_link }}
+
+      Best,
+      {{ merchant_name }} Team

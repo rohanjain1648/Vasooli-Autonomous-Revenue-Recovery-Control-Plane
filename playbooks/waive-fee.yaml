@@ -1,0 +1,23 @@
+# Waive a late fee for good-standing customers with genuine gateway-side
+# failures. Always needs human approval — it directly reduces recovered ₹.
+id: waive-fee-v1
+name: Late Fee Waiver
+category: subscription_failure
+cost_paise: 0 # cost is the waived fee itself, computed at execution time
+
+arms:
+  - name: control
+    description: No waiver offered
+    requires_approval: false
+
+  - name: waive-late-fee
+    description: Waive the late fee if the failure was issuer-side
+    requires_approval: true
+    template: |
+      Hi {{ customer_name }},
+
+      We saw your payment failed due to {{ error_reason }}, which wasn't
+      your fault. We've waived the late fee — please retry: {{ retry_link }}
+
+      Best,
+      {{ merchant_name }} Team

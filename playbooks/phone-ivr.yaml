@@ -1,0 +1,25 @@
+# Hinglish IVR script for high-value subscription/mandate failures.
+# Rendered offline via TTS — no live telephony dependency (see design spec §3, out of scope).
+id: phone-ivr-v1
+name: Hinglish IVR Recovery Call
+category: subscription_failure
+cost_paise: 200 # assumed cost per rendered call-minute
+
+arms:
+  - name: control
+    description: No call placed
+    requires_approval: false
+
+  - name: ivr-reminder
+    description: Automated Hinglish reminder call script
+    requires_approval: false
+    template: |
+      Namaste {{ customer_name }} ji,
+
+      Aapka {{ merchant_name }} subscription payment of ₹{{ amount }}
+      process nahi ho paya kyunki {{ error_reason }}.
+
+      Kripya apna payment method update karein: {{ retry_link }}
+      Ya aap humein {{ support_number }} par call kar sakte hain.
+
+      Dhanyavaad!

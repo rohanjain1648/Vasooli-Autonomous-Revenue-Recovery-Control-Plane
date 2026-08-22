@@ -1,0 +1,23 @@
+# B2B receivables: offer a small early-settlement discount. Always needs
+# human approval since it directly reduces receivable value.
+id: offer-discount-v1
+name: Early Settlement Discount
+category: b2b_receivable
+cost_paise: 0 # cost is the discount itself, computed at execution time
+
+arms:
+  - name: control
+    description: No discount offered
+    requires_approval: false
+
+  - name: discount-5pct
+    description: 5% discount if paid within 7 days
+    requires_approval: true
+    template: |
+      Dear {{ customer_name }},
+
+      Invoice {{ invoice_id }} for ₹{{ amount }} is now {{ days_overdue }}
+      days overdue. Settle within 7 days for a 5% early-settlement discount.
+
+      Regards,
+      {{ merchant_name }} Accounts Team

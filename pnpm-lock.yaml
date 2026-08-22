@@ -38,6 +38,12 @@ importers:
 
   packages/ledger: {}
 
+  packages/policy:
+    dependencies:
+      '@vasooli/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/simulator:
     dependencies:
       '@vasooli/core':
