@@ -1,0 +1,31 @@
+{
+  "name": "@vasooli/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node --loader tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vasooli/core": "workspace:*",
+    "@vasooli/stats": "workspace:*",
+    "@vasooli/ledger": "workspace:*",
+    "@vasooli/policy": "workspace:*",
+    "@vasooli/llm": "workspace:*",
+    "@vasooli/razorpay": "workspace:*",
+    "@vasooli/executor": "workspace:*",
+    "@vasooli/orchestrator": "workspace:*",
+    "@vasooli/simulator": "workspace:*",
+    "@vasooli/detector": "workspace:*",
+    "fastify": "^5.1.0",
+    "@fastify/cors": "^10.0.1",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

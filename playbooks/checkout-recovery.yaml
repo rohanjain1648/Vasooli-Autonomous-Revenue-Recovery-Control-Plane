@@ -1,0 +1,35 @@
+# Abandoned-checkout recovery: nudge a customer who created an order but
+# never completed payment within the TTL window.
+id: checkout-recovery-v1
+name: Checkout Abandonment Recovery
+category: checkout_abandonment
+cost_paise: 0 # infra-only cost, no per-send charge assumed
+
+arms:
+  - name: control
+    description: No nudge sent (holdout baseline within this playbook)
+    requires_approval: false
+
+  - name: cart-reminder
+    description: Friendly reminder that the cart/order is still open
+    requires_approval: false
+    template: |
+      Hi {{ customer_name }},
+
+      You started a payment of ₹{{ amount }} but didn't finish checkout.
+      Pick up where you left off: {{ retry_link }}
+
+      Best,
+      {{ merchant_name }} Team
+
+  - name: checkout-offer
+    description: Small incentive discount to complete a high-value abandoned checkout
+    requires_approval: true
+    template: |
+      Hi {{ customer_name }},
+
+      Still interested in completing your ₹{{ amount }} order? Finish now
+      and get 3% off: {{ offer_link }}
+
+      Best,
+      {{ merchant_name }} Team

@@ -18,7 +18,7 @@ export interface OrchestratorDeps {
   razorpayClient: RazorpayClient;
   ledger: Ledger;
   policyEngine: PolicyEngine;
-  playbookArms: (PlaybookArm & { id: string })[];
+  playbookArms: (PlaybookArm & { id: string; costPaise?: bigint })[];
   banditArms: Arm[]; // shared posterior state across cases, mutated in place
   rngSeed?: number;
   holdoutPercent?: number;
@@ -35,7 +35,7 @@ export interface OrchestrationResult {
 interface ExecContext {
   signal: RiskSignal;
   case: RecoveryCase;
-  arm: PlaybookArm & { id: string };
+  arm: PlaybookArm & { id: string; costPaise?: bigint };
   llmProvider: LlmProvider;
   razorpayClient: RazorpayClient;
   content?: string;
@@ -137,7 +137,7 @@ export async function orchestrateCase(
     nowMs,
     recentTouches: 0,
     estimatedRecoverablePaise: signal.exposurePaise,
-    actionCostPaise: arm.name === "control" ? 0n : 100n,
+    actionCostPaise: arm.costPaise ?? (arm.name === "control" ? 0n : 100n),
     isHighRiskAction: arm.requiresApproval,
   };
   const evaluation = deps.policyEngine.evaluate(policyContext);
@@ -191,7 +191,7 @@ export async function orchestrateCase(
 async function executeAndFinish(
   awaitingCase: RecoveryCase,
   signal: RiskSignal,
-  arm: PlaybookArm & { id: string },
+  arm: PlaybookArm & { id: string; costPaise?: bigint },
   selected: string,
   deps: OrchestratorDeps,
   nowMs: number,
@@ -279,7 +279,7 @@ async function executeAndFinish(
 export interface PendingApproval {
   case: RecoveryCase; // state must be "awaiting_approval"
   signal: RiskSignal;
-  arm: PlaybookArm & { id: string };
+  arm: PlaybookArm & { id: string; costPaise?: bigint };
   selectedArm: string;
 }
 
