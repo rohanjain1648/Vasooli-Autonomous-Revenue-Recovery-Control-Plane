@@ -14,7 +14,7 @@ export function wilsonInterval(
   z = 1.96,
 ): Interval {
   if (trials <= 0) {
-    return { point: 0, lower: 0, upper: 0 };
+    return { point: 0, lower: 0, upper: 1 };
   }
   const p = successes / trials;
   const z2 = z * z;

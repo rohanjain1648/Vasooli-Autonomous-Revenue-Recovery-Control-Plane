@@ -10,7 +10,7 @@ describe("wilsonInterval", () => {
   });
 
   it("returns a zero interval for zero trials", () => {
-    expect(wilsonInterval(0, 0)).toEqual({ point: 0, lower: 0, upper: 0 });
+    expect(wilsonInterval(0, 0)).toEqual({ point: 0, lower: 0, upper: 1 });
   });
 
   it("narrows as the number of trials increases at the same proportion", () => {
@@ -23,5 +23,12 @@ describe("wilsonInterval", () => {
     const { lower, upper } = wilsonInterval(1, 1);
     expect(lower).toBeGreaterThanOrEqual(0);
     expect(upper).toBeLessThanOrEqual(1);
+  });
+
+  it("returns maximum-uncertainty interval for zero trials", () => {
+    const interval = wilsonInterval(0, 0);
+    expect(interval.point).toBe(0);
+    expect(interval.lower).toBe(0);
+    expect(interval.upper).toBe(1);
   });
 });
