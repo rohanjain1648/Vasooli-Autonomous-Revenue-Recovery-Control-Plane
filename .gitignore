@@ -5,3 +5,6 @@ dist/
 .turbo/
 coverage/
 .superpowers/
+.next/
+next-env.d.ts
+*.tsbuildinfo
