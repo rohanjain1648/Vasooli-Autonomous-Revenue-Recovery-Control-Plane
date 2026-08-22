@@ -14,12 +14,13 @@ const TRANSITIONS: Record<CaseState, readonly CaseState[]> = {
   detected: ["diagnosing", "holdout", "stopped"],
   diagnosing: ["planned", "failed", "stopped"],
   planned: ["awaiting_approval", "executing", "stopped"],
-  awaiting_approval: ["executing", "stopped"],
-  executing: ["recovered", "failed", "stopped"],
+  awaiting_approval: ["executing", "deferred", "stopped"],
+  executing: ["recovered", "failed", "awaiting_approval", "stopped"],
   recovered: [],
   failed: [],
   stopped: [],
-  holdout: ["recovered", "failed"],
+  holdout: ["recovered", "failed", "stopped"],
+  deferred: ["awaiting_approval", "stopped"],
 };
 
 export function canTransition(from: CaseState, to: CaseState): boolean {

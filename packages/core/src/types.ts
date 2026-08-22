@@ -21,6 +21,7 @@ export const CaseStateSchema = z.enum([
   "failed",
   "stopped",
   "holdout",
+  "deferred",
 ]);
 export type CaseState = z.infer<typeof CaseStateSchema>;
 

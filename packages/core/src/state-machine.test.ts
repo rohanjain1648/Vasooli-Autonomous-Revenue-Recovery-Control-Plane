@@ -51,9 +51,35 @@ describe("recovery case state machine", () => {
       "planned",
       "awaiting_approval",
       "executing",
+      "holdout",
+      "deferred",
     ];
     for (const state of nonTerminal) {
       expect(canTransition(state, "stopped")).toBe(true);
     }
+  });
+
+  it("allows holdout -> stopped (F6: holdout must be reachable by hard stop)", () => {
+    expect(canTransition("holdout", "stopped")).toBe(true);
+  });
+
+  it("allows executing -> awaiting_approval (F6: mid-execution approval re-gating)", () => {
+    expect(canTransition("executing", "awaiting_approval")).toBe(true);
+  });
+
+  it("allows awaiting_approval -> deferred (F5: TRAI quiet-hour deferral)", () => {
+    expect(canTransition("awaiting_approval", "deferred")).toBe(true);
+  });
+
+  it("allows deferred -> awaiting_approval (F5: retry after quiet hours end)", () => {
+    expect(canTransition("deferred", "awaiting_approval")).toBe(true);
+  });
+
+  it("allows deferred -> stopped (F5: hard stop reachable from deferred)", () => {
+    expect(canTransition("deferred", "stopped")).toBe(true);
+  });
+
+  it("isTerminal is false for deferred", () => {
+    expect(isTerminal("deferred")).toBe(false);
   });
 });
