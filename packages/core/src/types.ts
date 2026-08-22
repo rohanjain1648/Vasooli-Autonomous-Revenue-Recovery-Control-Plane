@@ -49,3 +49,20 @@ export const RecoveryCaseSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 export type RecoveryCase = z.infer<typeof RecoveryCaseSchema>;
+
+/** Schema for money in JSON payloads: accepts string, number, or bigint input; validates and returns bigint. */
+export const MoneyPaiseJson = z
+  .union([z.string(), z.number().int().nonnegative(), z.bigint().nonnegative()])
+  .transform((v) => (typeof v === "bigint" ? v : BigInt(v)));
+
+/** Convert a bigint paise value to a decimal string for JSON serialization. */
+export function paiseToJson(value: bigint): string {
+  return value.toString();
+}
+
+/** Parse a decimal string from JSON back to bigint paise. Throws on invalid input. */
+export function stringToPaise(value: string): bigint {
+  const parsed = BigInt(value);
+  if (parsed < 0n) throw new Error(`Money must be non-negative, got ${value}`);
+  return parsed;
+}
