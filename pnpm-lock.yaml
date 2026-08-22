@@ -46,6 +46,30 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/orchestrator:
+    dependencies:
+      '@vasooli/core':
+        specifier: workspace:*
+        version: link:../core
+      '@vasooli/executor':
+        specifier: workspace:*
+        version: link:../executor
+      '@vasooli/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@vasooli/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@vasooli/policy':
+        specifier: workspace:*
+        version: link:../policy
+      '@vasooli/razorpay':
+        specifier: workspace:*
+        version: link:../razorpay
+      '@vasooli/stats':
+        specifier: workspace:*
+        version: link:../stats
+
   packages/policy:
     dependencies:
       '@vasooli/core':
