@@ -7,8 +7,8 @@ import type { PlaybookArm } from "@vasooli/llm";
 import { FakeRazorpayClient } from "@vasooli/razorpay";
 import { Ledger } from "@vasooli/ledger";
 import type { Arm } from "@vasooli/stats";
-import { orchestrateCase } from "./orchestrator.js";
-import type { OrchestratorDeps } from "./orchestrator.js";
+import { orchestrateCase, approveAndExecute, rejectApproval } from "./orchestrator.js";
+import type { OrchestratorDeps, PendingApproval } from "./orchestrator.js";
 
 /** Fixed local hour 12:00 — outside TRAI quiet hours (21:00-09:00) for every test unless noted. */
 const DAYTIME_MS = new Date(2026, 0, 1, 12, 0, 0).getTime();
@@ -134,6 +134,52 @@ describe("orchestrateCase", () => {
 
     const actions = deps.ledger.all().map((e) => e.action);
     expect(actions).toEqual(["detected", "diagnosed", "planned", "policy_evaluated"]);
+    expect(deps.ledger.verify().valid).toBe(true);
+  });
+});
+
+describe("approveAndExecute / rejectApproval", () => {
+  function pendingFrom(deps: OrchestratorDeps, signal: ReturnType<typeof makeSignal>): PendingApproval {
+    return {
+      case: {
+        id: randomUUID(),
+        signalId: signal.id,
+        category: signal.category,
+        state: "awaiting_approval",
+        armGroup: "treatment",
+        exposurePaise: signal.exposurePaise,
+        recoveredPaise: 0n,
+        createdAt: new Date(DAYTIME_MS).toISOString(),
+        updatedAt: new Date(DAYTIME_MS).toISOString(),
+      },
+      signal,
+      arm: deps.playbookArms[0],
+      selectedArm: deps.playbookArms[0].id,
+    };
+  }
+
+  it("executes and resolves to recovered/failed on approval", async () => {
+    const deps = makeDeps();
+    const pending = pendingFrom(deps, makeSignal());
+
+    const result = await approveAndExecute(pending, deps);
+
+    expect(result.policyDecision).toBe("PASS");
+    expect(["recovered", "failed"]).toContain(result.case.state);
+    const actions = deps.ledger.all().map((e) => e.action);
+    expect(actions).toEqual(["approved", "executing", "execution_result", result.case.state]);
+    expect(deps.ledger.verify().valid).toBe(true);
+  });
+
+  it("stops the case without executing on rejection", () => {
+    const deps = makeDeps();
+    const pending = pendingFrom(deps, makeSignal());
+
+    const result = rejectApproval(pending, deps);
+
+    expect(result.case.state).toBe("stopped");
+    const actions = deps.ledger.all().map((e) => e.action);
+    expect(actions).toEqual(["rejected", "stopped"]);
     expect(deps.ledger.verify().valid).toBe(true);
   });
 });

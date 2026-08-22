@@ -173,12 +173,34 @@ export async function orchestrateCase(
   }
 
   if (evaluation.finalDecision === "NEEDS_APPROVAL") {
-    // Case sits in awaiting_approval; a human decides externally.
+    // Case sits in awaiting_approval; a human decides externally via
+    // approveAndExecute() (approve) or stopViaRejection() (reject).
     return { case: recoveryCase, diagnosis, selectedArm: selected, policyDecision: "NEEDS_APPROVAL" };
   }
 
-  // PASS: execute.
-  recoveryCase = { ...recoveryCase, state: transition("awaiting_approval", "executing") };
+  // PASS: execute immediately.
+  const finished = await executeAndFinish(recoveryCase, signal, arm, selected, deps, nowMs);
+  return { case: finished, diagnosis, selectedArm: selected, policyDecision: "PASS" };
+}
+
+/**
+ * The execution phase, shared by the automatic PASS path and the
+ * human-approved resume path: awaiting_approval -> executing ->
+ * recovered/failed, with durable steps and a bandit posterior update.
+ */
+async function executeAndFinish(
+  awaitingCase: RecoveryCase,
+  signal: RiskSignal,
+  arm: PlaybookArm & { id: string },
+  selected: string,
+  deps: OrchestratorDeps,
+  nowMs: number,
+): Promise<RecoveryCase> {
+  const caseId = awaitingCase.id;
+  let recoveryCase: RecoveryCase = {
+    ...awaitingCase,
+    state: transition("awaiting_approval", "executing"),
+  };
   deps.ledger.append({ actor: "orchestrator", caseId, action: "executing", payload: {} });
 
   const execContext: ExecContext = {
@@ -248,5 +270,57 @@ export async function orchestrateCase(
     payload: { recoveredPaise: recoveryCase.recoveredPaise.toString() },
   });
 
-  return { case: recoveryCase, diagnosis, selectedArm: selected, policyDecision: "PASS" };
+  return recoveryCase;
+}
+
+/** Everything needed to resume a case that stopped at awaiting_approval
+ * pending a human decision. Callers (e.g. the dashboard API) must persist
+ * this alongside the case while it waits. */
+export interface PendingApproval {
+  case: RecoveryCase; // state must be "awaiting_approval"
+  signal: RiskSignal;
+  arm: PlaybookArm & { id: string };
+  selectedArm: string;
+}
+
+/** A human approved a NEEDS_APPROVAL case: proceed to execution exactly as
+ * the automatic PASS path would have. */
+export async function approveAndExecute(
+  pending: PendingApproval,
+  deps: OrchestratorDeps,
+): Promise<OrchestrationResult> {
+  const nowMs = deps.nowMs ?? Date.now();
+  deps.ledger.append({
+    actor: "human",
+    caseId: pending.case.id,
+    action: "approved",
+    payload: { selectedArm: pending.selectedArm },
+  });
+  const finished = await executeAndFinish(
+    pending.case,
+    pending.signal,
+    pending.arm,
+    pending.selectedArm,
+    deps,
+    nowMs,
+  );
+  return { case: finished, selectedArm: pending.selectedArm, policyDecision: "PASS" };
+}
+
+/** A human rejected a NEEDS_APPROVAL case: stop it, no execution. */
+export function rejectApproval(pending: PendingApproval, deps: OrchestratorDeps): OrchestrationResult {
+  const nowMs = deps.nowMs ?? Date.now();
+  const stopped: RecoveryCase = {
+    ...pending.case,
+    state: transition("awaiting_approval", "stopped"),
+    updatedAt: nowIso(nowMs),
+  };
+  deps.ledger.append({
+    actor: "human",
+    caseId: pending.case.id,
+    action: "rejected",
+    payload: { selectedArm: pending.selectedArm },
+  });
+  deps.ledger.append({ actor: "orchestrator", caseId: pending.case.id, action: "stopped", payload: {} });
+  return { case: stopped, selectedArm: pending.selectedArm, policyDecision: "BLOCK" };
 }
