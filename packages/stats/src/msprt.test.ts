@@ -31,4 +31,30 @@ describe("sequentialUpliftTest", () => {
     const result = sequentialUpliftTest(501, 1000, 500, 1000);
     expect(result.pValue).toBeGreaterThan(0.05);
   });
+
+  it("returns pValue=1 when plug-in variance is zero", () => {
+    // All successes in both arms (pooled p=1, variance=0)
+    const allSuccess = sequentialUpliftTest(5, 5, 5, 5);
+    expect(allSuccess.pValue).toBe(1);
+    expect(Number.isNaN(allSuccess.pValue)).toBe(false);
+
+    // All failures in both arms (pooled p=0, variance=0)
+    const allFail = sequentialUpliftTest(0, 5, 0, 5);
+    expect(allFail.pValue).toBe(1);
+    expect(Number.isNaN(allFail.pValue)).toBe(false);
+  });
+
+  it("returns diff field for directional interpretation", () => {
+    // Positive uplift
+    const pos = sequentialUpliftTest(800, 1000, 500, 1000);
+    expect(pos.diff).toBeCloseTo(0.3, 5);
+
+    // Negative uplift
+    const neg = sequentialUpliftTest(500, 1000, 800, 1000);
+    expect(neg.diff).toBeCloseTo(-0.3, 5);
+
+    // Zero uplift
+    const zero = sequentialUpliftTest(500, 1000, 500, 1000);
+    expect(zero.diff).toBe(0);
+  });
 });
