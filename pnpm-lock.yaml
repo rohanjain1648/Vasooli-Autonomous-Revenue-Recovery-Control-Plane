@@ -36,13 +36,23 @@ importers:
         specifier: workspace:*
         version: link:../stats
 
+  packages/executor: {}
+
   packages/ledger: {}
+
+  packages/llm:
+    dependencies:
+      '@vasooli/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/policy:
     dependencies:
       '@vasooli/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/razorpay: {}
 
   packages/simulator:
     dependencies:
