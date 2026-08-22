@@ -1,0 +1,16 @@
+{
+  "name": "@vasooli/detector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vasooli/core": "workspace:*",
+    "@vasooli/stats": "workspace:*",
+    "@vasooli/simulator": "workspace:*"
+  }
+}
