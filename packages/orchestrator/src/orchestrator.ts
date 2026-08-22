@@ -23,6 +23,13 @@ export interface OrchestratorDeps {
   rngSeed?: number;
   holdoutPercent?: number;
   nowMs?: number;
+  /** Overrides how the case id is generated; defaults to randomUUID(). A
+   * seeded demo/replay script injects a deterministic factory here so an
+   * entire batch run is byte-for-byte reproducible — every other source
+   * of randomness in this module (arm assignment, outcome simulation,
+   * bandit draws) is a pure hash-function of this id, so pinning it pins
+   * everything downstream. */
+  caseIdFactory?: () => string;
 }
 
 export interface OrchestrationResult {
@@ -58,7 +65,7 @@ export async function orchestrateCase(
 ): Promise<OrchestrationResult> {
   const nowMs = deps.nowMs ?? Date.now();
   const holdoutPercent = deps.holdoutPercent ?? 20;
-  const caseId = randomUUID();
+  const caseId = deps.caseIdFactory?.() ?? randomUUID();
   const armGroup = assignArm(caseId, holdoutPercent);
 
   let recoveryCase: RecoveryCase = {

@@ -37,8 +37,9 @@ export class SignalFeed {
   constructor(
     private readonly state: EngineState,
     seed = 42,
+    startAtMs = Date.now(),
   ) {
-    this.simMs = Date.now();
+    this.simMs = startAtMs;
     this.generator = new EventGenerator({
       seed,
       startAtMs: this.simMs,

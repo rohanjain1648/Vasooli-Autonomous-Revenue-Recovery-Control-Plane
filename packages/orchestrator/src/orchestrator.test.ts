@@ -138,6 +138,22 @@ describe("orchestrateCase", () => {
   });
 });
 
+describe("caseIdFactory", () => {
+  it("uses the injected factory instead of randomUUID, making the whole run reproducible", async () => {
+    const deps = makeDeps({ caseIdFactory: () => "fixed-case-id" });
+    const result = await orchestrateCase(makeSignal(), deps);
+
+    expect(result.case.id).toBe("fixed-case-id");
+  });
+
+  it("falls back to randomUUID when no factory is supplied", async () => {
+    const deps = makeDeps();
+    const result = await orchestrateCase(makeSignal(), deps);
+
+    expect(result.case.id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});
+
 describe("approveAndExecute / rejectApproval", () => {
   function pendingFrom(deps: OrchestratorDeps, signal: ReturnType<typeof makeSignal>): PendingApproval {
     return {

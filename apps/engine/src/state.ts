@@ -33,6 +33,9 @@ export interface EngineConfig {
   catalog: PlaybookCatalog;
   rngSeed?: number;
   holdoutPercent?: number;
+  /** Passed straight through to OrchestratorDeps.caseIdFactory — set by
+   * the seeded demo script for a fully reproducible batch. */
+  caseIdFactory?: () => string;
 }
 
 /**
@@ -74,6 +77,7 @@ export class EngineState {
       banditArms: this.armsForCategory(category),
       rngSeed: this.config.rngSeed,
       holdoutPercent: this.config.holdoutPercent,
+      caseIdFactory: this.config.caseIdFactory,
       nowMs,
     };
   }

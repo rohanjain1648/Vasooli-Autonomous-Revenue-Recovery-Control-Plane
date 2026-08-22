@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node --loader tsx src/index.ts",
+    "demo": "tsx scripts/demo.ts",
+    "render-ivr-script": "tsx scripts/render-ivr-script.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

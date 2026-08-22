@@ -1,6 +1,19 @@
 import { newcombeInterval, sequentialUpliftTest } from "@vasooli/stats";
 import type { EngineState } from "./state.js";
 
+/** Per-category cohort comparison for the experiments page/demo script:
+ * raw counts plus the same uplift test (mSPRT) and rate-difference CI
+ * (Newcombe) used for the money-wall headline, computed per category. */
+export function computeExperimentsSnapshot(state: EngineState) {
+  return state.experimentsSnapshot().map(({ category, treatment, holdout }) => ({
+    category,
+    treatment,
+    holdout,
+    uplift: sequentialUpliftTest(treatment.successes, treatment.n, holdout.successes, holdout.n),
+    rateInterval: newcombeInterval(treatment.successes, treatment.n, holdout.successes, holdout.n),
+  }));
+}
+
 /**
  * Turns the raw per-cohort counts in EngineState into the headline
  * "incremental ₹" number the money wall shows: the treatment/holdout

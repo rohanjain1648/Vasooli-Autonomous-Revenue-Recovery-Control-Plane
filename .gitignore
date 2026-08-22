@@ -8,3 +8,5 @@ coverage/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+demo/output/
+demo/audio/*.wav

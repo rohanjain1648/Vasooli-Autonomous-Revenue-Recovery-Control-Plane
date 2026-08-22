@@ -1,0 +1,9 @@
+Namaste Rohan ji,
+
+Aapka Vasooli Demo Merchant subscription payment of ₹2,450.00
+process nahi ho paya kyunki aapke card ka daily limit exceed ho gaya tha.
+
+Kripya apna payment method update karein: pay.example/retry/demo-case-001
+Ya aap humein 1800-123-4567 par call kar sakte hain.
+
+Dhanyavaad!

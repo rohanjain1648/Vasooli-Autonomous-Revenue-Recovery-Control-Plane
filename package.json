@@ -7,7 +7,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "build": "pnpm -r --if-present run build"
+    "build": "pnpm -r --if-present run build",
+    "demo": "pnpm --filter @vasooli/engine run demo",
+    "dev:engine": "pnpm --filter @vasooli/engine run dev",
+    "dev:web": "pnpm --filter @vasooli/web run dev",
+    "demo:voice": "pnpm --filter @vasooli/engine run render-ivr-script && powershell -ExecutionPolicy Bypass -File scripts/render-ivr-audio.ps1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
