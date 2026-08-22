@@ -674,6 +674,7 @@ vasooli/
 
 - 📄 **Design Specification:** [docs/superpowers/specs/2026-08-21-vasooli-design.md](docs/superpowers/specs/2026-08-21-vasooli-design.md)
 - 🏛️ **Architecture Guide:** [docs/architecture.md](docs/architecture.md)
+- 🚀 **Production Deployment Guide:** [docs/deployment.md](docs/deployment.md)
 - 🎙️ **5-Minute Pitch Script & Demo Walkthrough:** [PITCH.md](PITCH.md)
 
 ---

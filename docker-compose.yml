@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  engine:
+    build:
+      context: .
+      target: engine-runner
+    container_name: vasooli-engine
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      target: web-runner
+    container_name: vasooli-web
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NEXT_PUBLIC_ENGINE_URL=http://localhost:4000
+    depends_on:
+      - engine
+    restart: unless-stopped

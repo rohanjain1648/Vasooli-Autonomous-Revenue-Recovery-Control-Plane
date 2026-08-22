@@ -1,0 +1,47 @@
+services:
+  # ---------------------------------------------------------------------------
+  # 1. Vasooli Backend Engine (Fastify REST + SSE Service)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: vasooli-engine
+    env: node
+    plan: starter
+    region: oregon
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r --if-present run build
+    startCommand: pnpm --filter @vasooli/engine start
+    healthCheckPath: /api/metrics
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      # Optional live provider keys (leave blank or configure in Render Dashboard)
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # 2. Vasooli Web Dashboard (Next.js 15 App)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: vasooli-web
+    env: node
+    plan: starter
+    region: oregon
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r --if-present run build
+    startCommand: pnpm --filter @vasooli/web start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_ENGINE_URL
+        fromService:
+          type: web
+          name: vasooli-engine
+          property: host
