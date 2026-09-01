@@ -1,5 +1,10 @@
-export const ENGINE_URL =
-  process.env.NEXT_PUBLIC_ENGINE_URL ?? "http://localhost:4000";
+/**
+ * Empty string means same-origin: the Next.js route handlers under
+ * /api embed the engine directly, so the dashboard is one deployable
+ * thing. Point NEXT_PUBLIC_ENGINE_URL at the standalone Fastify service
+ * (`pnpm dev:engine`, default :4000) to use that instead.
+ */
+export const ENGINE_URL = process.env.NEXT_PUBLIC_ENGINE_URL ?? "";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${ENGINE_URL}${path}`, {

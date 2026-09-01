@@ -37,13 +37,17 @@ export interface PlaybookCatalog {
   armsByCategory: Map<LeakageCategory, CatalogArm[]>;
 }
 
-/** Loads every `*.yaml` playbook from the repo-root `/playbooks` directory
- * and flattens their arms into a bandit-ready catalog. Read once at
- * startup — playbooks are static content, not something the LLM writes. */
-export function loadPlaybookCatalog(dir: string = PLAYBOOKS_DIR): PlaybookCatalog {
-  const files = readdirSync(dir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
-  const playbooks: RawPlaybook[] = files.map((f) => parse(readFileSync(join(dir, f), "utf8")));
+export type { RawPlaybook, RawPlaybookArm };
 
+/**
+ * Flattens already-parsed playbooks into a bandit-ready catalog.
+ *
+ * Kept separate from the filesystem read so callers that cannot reach the
+ * repo's `/playbooks` directory at runtime — a bundled serverless build,
+ * for instance — can hand over the same playbooks from wherever they got
+ * them and still go through this one code path.
+ */
+export function buildPlaybookCatalog(playbooks: RawPlaybook[]): PlaybookCatalog {
   const arms: CatalogArm[] = [];
   const armsByCategory = new Map<LeakageCategory, CatalogArm[]>();
 
@@ -67,4 +71,12 @@ export function loadPlaybookCatalog(dir: string = PLAYBOOKS_DIR): PlaybookCatalo
   }
 
   return { playbooks, arms, armsByCategory };
+}
+
+/** Loads every `*.yaml` playbook from the repo-root `/playbooks` directory.
+ * Read once at startup — playbooks are static content, not something the
+ * LLM writes. */
+export function loadPlaybookCatalog(dir: string = PLAYBOOKS_DIR): PlaybookCatalog {
+  const files = readdirSync(dir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+  return buildPlaybookCatalog(files.map((f) => parse(readFileSync(join(dir, f), "utf8"))));
 }

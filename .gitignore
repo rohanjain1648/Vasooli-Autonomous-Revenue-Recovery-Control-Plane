@@ -10,3 +10,8 @@ next-env.d.ts
 *.tsbuildinfo
 demo/output/
 demo/audio/*.wav
+
+# NOTE: apps/web/src/server/playbooks.generated.ts is deliberately NOT
+# ignored. It is generated from /playbooks by a prebuild step, but a host
+# that runs `next build` directly skips prebuild — committing it keeps the
+# deploy reproducible from a clean checkout.

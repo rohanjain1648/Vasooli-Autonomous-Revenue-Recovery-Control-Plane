@@ -1,18 +1,41 @@
 import type { Metadata } from "next";
-import { Nav } from "@/components/Nav";
+import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { SmoothScroll } from "@/components/ui/SmoothScroll";
+import { Cursor } from "@/components/ui/Cursor";
 import "./globals.css";
 
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  axes: ["SOFT", "WONK", "opsz"],
+  display: "swap",
+});
+
+const interTight = Inter_Tight({
+  subsets: ["latin"],
+  variable: "--font-inter-tight",
+  display: "swap",
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Vasooli — Revenue Recovery Control Plane",
-  description: "Glass-box dashboard for measured incremental revenue recovery.",
+  title: "Vasooli — Revenue recovery you can actually measure",
+  description:
+    "An autonomous revenue recovery control plane that reports incremental rupees, not gross. Randomised holdout, deterministic policy gate, tamper-evident audit ledger.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${fraunces.variable} ${interTight.variable} ${jetbrains.variable}`}>
       <body>
-        <Nav />
-        <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+        <SmoothScroll />
+        <Cursor />
+        {children}
       </body>
     </html>
   );

@@ -1,59 +1,272 @@
 @import "tailwindcss";
 
+/* ============================================================
+   VASOOLI DESIGN SYSTEM
+
+   Concept: "The Gap". Every visual device in this product is a
+   pair — what the agent did, and what would have happened anyway —
+   with the measured difference sitting in the space between them.
+
+   The landing page is a printed ledger: light, documentary, the
+   place where the argument is made. The console is the live
+   instrument: dark, dense, the place where the machine runs.
+   ============================================================ */
+
 @theme {
-  --color-bg: #0b0f14;
-  --color-surface: #131a22;
-  --color-surface-hover: #1a2430;
-  --color-border: #253140;
-  --color-text: #e6edf3;
-  --color-text-dim: #8b98a5;
-  --color-accent: #22c55e;
-  --color-accent-dim: #14532d;
-  --color-warn: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
+  /* --- Ledger (light surface) --- */
+  --color-paper: #e9e7e0; /* cool bone, not cream */
+  --color-paper-raised: #f3f2ed;
+  --color-paper-sunk: #dedbd2;
+  --color-rule: #c9c5b8;
+
+  /* --- Ink (dark surface + type) --- */
+  --color-ink: #16121f; /* deep ink-violet, never pure black */
+  --color-ink-deep: #0e0b15;
+  --color-ink-surface: #191527;
+  --color-ink-raised: #221c33;
+  --color-ink-rule: #2e2743;
+  --color-ink-dim: #948ca8;
+
+  /* --- The pair. Everything hangs off these two. --- */
+  --color-treatment: #e0a03a; /* marigold: the agent acted */
+  --color-treatment-soft: #7a5416;
+  --color-holdout: #71798c; /* steel: the counterfactual */
+  --color-holdout-soft: #3d4453;
+
+  /* --- Verdicts --- */
+  --color-recovered: #348972; /* verdigris */
+  --color-blocked: #c4402f; /* sindoor */
+  --color-pending: #b98226;
+
+  /* --- Type --- */
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", monospace;
+
+  /* --- Motion --- */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background: var(--color-paper);
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  overscroll-behavior-y: none;
 }
 
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
+body[data-surface="ink"] {
+  background: var(--color-ink-deep);
+  color: var(--color-paper);
 }
 
-.pill {
-  border-radius: 9999px;
-  padding: 0.125rem 0.625rem;
-  font-size: 0.75rem;
-  font-weight: 600;
+::selection {
+  background: var(--color-treatment);
+  color: var(--color-ink);
+}
+
+/* Numerals must never jitter while counting. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ============================================================
+   TYPE ROLES
+   ============================================================ */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-variation-settings: "SOFT" 0, "WONK" 1, "opsz" 144;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+}
+
+.display-tight {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variation-settings: "SOFT" 20, "WONK" 1, "opsz" 72;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+/* Small structural labels. Used for anything the system names:
+   states, actors, cohorts, rule ids. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.02em;
+}
+
+/* ============================================================
+   LEDGER RULES
+   The hairline is load-bearing: it separates entries the way a
+   ruled ledger page does.
+   ============================================================ */
+
+.rule-t {
+  border-top: 1px solid var(--color-rule);
+}
+.rule-b {
+  border-bottom: 1px solid var(--color-rule);
+}
+[data-surface="ink"] .rule-t,
+.on-ink .rule-t {
+  border-top-color: var(--color-ink-rule);
+}
+[data-surface="ink"] .rule-b,
+.on-ink .rule-b {
+  border-bottom-color: var(--color-ink-rule);
+}
+
+/* ============================================================
+   CONSOLE PRIMITIVES (dark surface)
+   ============================================================ */
+
+.panel {
+  background: var(--color-ink-surface);
+  border: 1px solid var(--color-ink-rule);
+  border-radius: 4px;
+}
+
+.panel-raised {
+  background: var(--color-ink-raised);
+  border: 1px solid var(--color-ink-rule);
+  border-radius: 4px;
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 2px;
   display: inline-block;
   white-space: nowrap;
+  border: 1px solid transparent;
 }
 
-table.data-table {
+table.ledger {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
-
-table.data-table th {
+table.ledger th {
   text-align: left;
-  color: var(--color-text-dim);
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--color-ink-rule);
+  color: var(--color-ink-dim);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
   font-weight: 500;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+table.ledger td {
+  padding: 0.6875rem 0.875rem;
+  border-bottom: 1px solid var(--color-ink-rule);
+  vertical-align: middle;
+}
+table.ledger tbody tr {
+  transition: background 0.18s var(--ease-out-expo);
+}
+table.ledger tbody tr:hover td {
+  background: var(--color-ink-raised);
 }
 
-table.data-table td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
+/* ============================================================
+   INTERACTION
+   ============================================================ */
+
+/* The cursor is replaced on pointer-fine devices; hide the native
+   one only there, so touch and keyboard users are unaffected. */
+@media (hover: hover) and (pointer: fine) {
+  body[data-cursor="on"],
+  body[data-cursor="on"] * {
+    cursor: none !important;
+  }
 }
 
-table.data-table tr:hover td {
-  background: var(--color-surface-hover);
+:focus-visible {
+  outline: 2px solid var(--color-treatment);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Anything that should not be visible until its reveal fires.
+   Kept in CSS so there is no first-paint flash before JS boots. */
+.pre-reveal {
+  opacity: 0;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+body[data-surface="ink"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+body[data-surface="ink"] ::-webkit-scrollbar-track {
+  background: var(--color-ink-deep);
+}
+body[data-surface="ink"] ::-webkit-scrollbar-thumb {
+  background: var(--color-ink-rule);
+  border-radius: 99px;
+  border: 3px solid var(--color-ink-deep);
+}
+body[data-surface="ink"] ::-webkit-scrollbar-thumb:hover {
+  background: #453a63;
+}
+
+/* ============================================================
+   REDUCED MOTION
+   Kill transforms and transitions, but never leave a reveal
+   element stuck at opacity 0.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .pre-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

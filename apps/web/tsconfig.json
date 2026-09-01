@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    // ES2020 or later is required: money is bigint everywhere in this
+    // system (see docs/adr/0003), and the engine packages the route
+    // handlers embed use bigint literals.
+    "target": "ES2020",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,

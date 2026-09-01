@@ -1,19 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import type { EngineState } from "../state.js";
 import { toJsonSafe } from "../serialize.js";
+import { toApprovalView } from "../views.js";
 
 export async function approvalsRoutes(fastify: FastifyInstance, state: EngineState): Promise<void> {
-  fastify.get("/api/approvals", async () => {
-    return state.listApprovals().map((record) =>
-      toJsonSafe({
-        ...record.case,
-        signal: record.signal,
-        diagnosis: record.diagnosis,
-        selectedArm: record.selectedArm,
-        arm: record.pending?.arm,
-      }),
-    );
-  });
+  fastify.get("/api/approvals", async () => state.listApprovals().map(toApprovalView));
 
   fastify.post("/api/approvals/:id/approve", async (req, reply) => {
     const { id } = req.params as { id: string };
