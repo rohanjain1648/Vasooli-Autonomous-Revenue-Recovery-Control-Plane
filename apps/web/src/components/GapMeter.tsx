@@ -66,7 +66,9 @@ export function GapMeter({
       />
 
       {/* The gutter. This is the space the whole product exists to measure. */}
-      <div className="relative flex items-stretch gap-3 py-1 pl-[7.5rem] sm:pl-[9rem]">
+      {/* Indent matches the label column (7rem/8.25rem) plus the 0.75rem
+          gap, so the bracket starts exactly where the tracks do. */}
+      <div className="relative flex items-stretch gap-3 py-1 pl-[7.75rem] sm:pl-[9rem]">
         <div className={`w-3 shrink-0 border-y border-l ${bracket}`} aria-hidden />
         <motion.div
           className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2"

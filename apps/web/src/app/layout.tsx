@@ -7,6 +7,10 @@ import "./globals.css";
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-fraunces",
+  // The hero and closing statements set their emphasis in real italics.
+  // Without loading the italic style the browser synthesises an oblique,
+  // which on a face with this much contrast looks broken rather than emphatic.
+  style: ["normal", "italic"],
   axes: ["SOFT", "WONK", "opsz"],
   display: "swap",
 });

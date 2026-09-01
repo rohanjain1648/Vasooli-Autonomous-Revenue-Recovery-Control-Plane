@@ -65,7 +65,12 @@ export function RevealWords({
       initial="hidden"
       whileInView="shown"
       viewport={{ once: true, margin: "-10% 0px" }}
-      transition={{ staggerChildren: stagger, delayChildren: delay }}
+      // staggerChildren has to live on the variant's own transition, not on
+      // the top-level transition prop, or the words all arrive at once.
+      variants={{
+        hidden: {},
+        shown: { transition: { staggerChildren: stagger, delayChildren: delay } },
+      }}
       aria-label={text}
     >
       {words.map((word, i) => (
