@@ -87,7 +87,13 @@ export class SignalFeed {
       category === "checkout_abandonment"
         ? { orderId: randomUUID(), idleMs: 1_800_000 + Math.floor(this.rng() * 600_000) }
         : category === "subscription_failure"
-          ? { subscriptionId: randomUUID(), errorCode: "mandate_charge_failed" }
+          ? {
+              subscriptionId: randomUUID(),
+              // Mostly a plain mandate failure; sometimes the mandate has
+              // hit NPCI's retry-frequency cap and needs a different
+              // playbook (re-authorization) rather than another retry.
+              errorCode: this.rng() < 0.75 ? "mandate_charge_failed" : "payment_frequency_limit_exceeded",
+            }
           : { invoiceId: randomUUID(), daysOverdue: 30 + Math.floor(this.rng() * 60) };
 
     return makeSignal({

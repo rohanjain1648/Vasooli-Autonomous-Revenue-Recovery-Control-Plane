@@ -138,6 +138,69 @@ describe("orchestrateCase", () => {
   });
 });
 
+describe("contextual bandit (getBanditArms)", () => {
+  it("selects from and updates the per-evidence-code bucket, leaving the flat banditArms untouched", async () => {
+    const contextArms: Arm[] = [{ id: "email_nudge", alpha: 1, beta: 1 }];
+    const deps = makeDeps({ getBanditArms: () => contextArms });
+
+    await orchestrateCase(makeSignal(), deps);
+
+    expect(contextArms[0].alpha + contextArms[0].beta).toBe(3); // (1,1) + one observation
+    expect(deps.banditArms[0].alpha + deps.banditArms[0].beta).toBe(2); // untouched: still (1,1)
+  });
+
+  it("keeps separate posteriors for different evidence codes", async () => {
+    const buckets = new Map<string, Arm[]>();
+    const deps = makeDeps({
+      getBanditArms: (evidenceCode) => {
+        let arms = buckets.get(evidenceCode);
+        if (!arms) {
+          arms = [{ id: "email_nudge", alpha: 1, beta: 1 }];
+          buckets.set(evidenceCode, arms);
+        }
+        return arms;
+      },
+    });
+
+    await orchestrateCase(makeSignal({ evidence: { dominantErrorCode: "issuer_down" } }), deps);
+    await orchestrateCase(makeSignal({ evidence: { dominantErrorCode: "insufficient_funds" } }), deps);
+
+    expect(buckets.size).toBe(2);
+    expect([...buckets.keys()].sort()).toEqual(["insufficient_funds", "issuer_down"]);
+    for (const arms of buckets.values()) {
+      expect(arms[0].alpha + arms[0].beta).toBe(3);
+    }
+  });
+
+  it("carries the contextual bucket across the human-approval gap", async () => {
+    const contextArms: Arm[] = [{ id: "email_nudge", alpha: 1, beta: 1 }];
+    const deps = makeDeps({ getBanditArms: () => contextArms });
+    const signal = makeSignal();
+    const pending: PendingApproval = {
+      case: {
+        id: randomUUID(),
+        signalId: signal.id,
+        category: signal.category,
+        state: "awaiting_approval",
+        armGroup: "treatment",
+        exposurePaise: signal.exposurePaise,
+        recoveredPaise: 0n,
+        createdAt: new Date(DAYTIME_MS).toISOString(),
+        updatedAt: new Date(DAYTIME_MS).toISOString(),
+      },
+      signal,
+      arm: deps.playbookArms[0],
+      selectedArm: deps.playbookArms[0].id,
+      evidenceCode: "issuer_down",
+    };
+
+    await approveAndExecute(pending, deps);
+
+    expect(contextArms[0].alpha + contextArms[0].beta).toBe(3);
+    expect(deps.banditArms[0].alpha + deps.banditArms[0].beta).toBe(2); // untouched
+  });
+});
+
 describe("caseIdFactory", () => {
   it("uses the injected factory instead of randomUUID, making the whole run reproducible", async () => {
     const deps = makeDeps({ caseIdFactory: () => "fixed-case-id" });

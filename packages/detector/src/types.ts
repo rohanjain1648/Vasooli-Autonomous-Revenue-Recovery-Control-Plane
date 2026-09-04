@@ -16,6 +16,10 @@ export interface CohortStats {
   failedPayments: number;
   /** Ring buffer of recent per-window success rates fed to CUSUM. */
   windowSuccessRates: number[];
+  /** Tally of failure error codes seen in the current window, reset
+   * alongside windowSuccessRates. Lets a fired signal report *which*
+   * failure mode dominates the outage, not just that one exists. */
+  errorCodeTally: Map<string, number>;
 }
 
 export interface PaymentDetectorState {

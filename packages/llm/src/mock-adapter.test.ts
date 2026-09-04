@@ -47,9 +47,50 @@ describe("MockLlmProvider.diagnose", () => {
     ["checkout_abandonment", "checkout_timeout"],
     ["subscription_failure", "mandate_charge_failed"],
     ["b2b_receivable", "promise_to_pay_breach"],
-  ] as const)("maps %s to evidence code %s", async (category, expectedCode) => {
+  ] as const)("falls back to a fixed evidence code %s for %s with no evidence", async (category, expectedCode) => {
     const diagnosis = await provider.diagnose(makeSignal({ category }));
     expect(diagnosis.evidenceCode).toBe(expectedCode);
+  });
+
+  describe("evidence-driven evidenceCode (contextual bandit routing)", () => {
+    it("passes through the detector's dominant error code for payment_failure", async () => {
+      const diagnosis = await provider.diagnose(
+        makeSignal({ category: "payment_failure", evidence: { dominantErrorCode: "insufficient_funds" } }),
+      );
+      expect(diagnosis.evidenceCode).toBe("insufficient_funds");
+    });
+
+    it("distinguishes a quick bounce from a slow cart drop-off by idle time", async () => {
+      const quick = await provider.diagnose(
+        makeSignal({ category: "checkout_abandonment", evidence: { ageMs: 60_000 } }),
+      );
+      const slow = await provider.diagnose(
+        makeSignal({ category: "checkout_abandonment", evidence: { ageMs: 40 * 60 * 1000 } }),
+      );
+      expect(quick.evidenceCode).toBe("quick_bounce");
+      expect(slow.evidenceCode).toBe("cart_review_dropoff");
+    });
+
+    it("passes through the mandate's actual errorCode for subscription_failure", async () => {
+      const diagnosis = await provider.diagnose(
+        makeSignal({
+          category: "subscription_failure",
+          evidence: { errorCode: "payment_frequency_limit_exceeded" },
+        }),
+      );
+      expect(diagnosis.evidenceCode).toBe("payment_frequency_limit_exceeded");
+    });
+
+    it.each([
+      ["30", "early_reminder_needed"],
+      ["60", "escalation_needed"],
+      ["90+", "collections_needed"],
+    ] as const)("maps aging bucket %s to %s for b2b_receivable", async (bucket, expectedCode) => {
+      const diagnosis = await provider.diagnose(
+        makeSignal({ category: "b2b_receivable", evidence: { agingBucket: bucket } }),
+      );
+      expect(diagnosis.evidenceCode).toBe(expectedCode);
+    });
   });
 });
 

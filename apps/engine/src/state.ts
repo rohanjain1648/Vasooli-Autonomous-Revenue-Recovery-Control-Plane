@@ -50,6 +50,10 @@ export class EngineState {
   readonly bus = new EngineEventBus();
   readonly cases = new Map<string, CaseRecord>();
   private readonly banditArms = new Map<LeakageCategory, Arm[]>();
+  /** Contextual posteriors, keyed by `${category}:${evidenceCode}`. Each
+   * bucket starts from the same flat prior as the category-level arms —
+   * the bandit learns per root-cause once outcomes accumulate. */
+  private readonly contextualBanditArms = new Map<string, Arm[]>();
 
   constructor(private readonly config: EngineConfig) {}
 
@@ -59,6 +63,17 @@ export class EngineState {
       const catalogArms = this.config.catalog.armsByCategory.get(category) ?? [];
       arms = catalogArms.map((a) => ({ id: a.id, alpha: 1, beta: 1 }));
       this.banditArms.set(category, arms);
+    }
+    return arms;
+  }
+
+  private contextualArms(category: LeakageCategory, evidenceCode: string): Arm[] {
+    const key = `${category}:${evidenceCode}`;
+    let arms = this.contextualBanditArms.get(key);
+    if (!arms) {
+      const catalogArms = this.config.catalog.armsByCategory.get(category) ?? [];
+      arms = catalogArms.map((a) => ({ id: a.id, alpha: 1, beta: 1 }));
+      this.contextualBanditArms.set(key, arms);
     }
     return arms;
   }
@@ -75,6 +90,7 @@ export class EngineState {
       policyEngine: this.config.policyEngine,
       playbookArms: this.playbookArmsForCategory(category),
       banditArms: this.armsForCategory(category),
+      getBanditArms: (evidenceCode) => this.contextualArms(category, evidenceCode),
       rngSeed: this.config.rngSeed,
       holdoutPercent: this.config.holdoutPercent,
       caseIdFactory: this.config.caseIdFactory,
@@ -102,7 +118,13 @@ export class EngineState {
         (a) => a.id === result.selectedArm,
       );
       if (arm) {
-        record.pending = { case: result.case, signal, arm, selectedArm: result.selectedArm };
+        record.pending = {
+          case: result.case,
+          signal,
+          arm,
+          selectedArm: result.selectedArm,
+          evidenceCode: result.diagnosis?.evidenceCode,
+        };
       }
     }
 

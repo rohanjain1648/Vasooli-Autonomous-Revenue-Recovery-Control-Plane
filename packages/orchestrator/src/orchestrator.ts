@@ -20,6 +20,15 @@ export interface OrchestratorDeps {
   policyEngine: PolicyEngine;
   playbookArms: (PlaybookArm & { id: string; costPaise?: bigint })[];
   banditArms: Arm[]; // shared posterior state across cases, mutated in place
+  /** Optional contextual layer: resolves a separate posterior bucket keyed
+   * by the LLM diagnosis's evidenceCode (e.g. "issuer_down" vs
+   * "insufficient_funds"), so the bandit learns which playbook works for
+   * *why* a case is at risk, not just its category. Called once per case,
+   * after diagnosis and before arm selection; the returned array is
+   * mutated in place after the outcome resolves, same contract as
+   * `banditArms`. Falls back to `banditArms` when absent, so existing
+   * callers are unaffected. */
+  getBanditArms?: (evidenceCode: string) => Arm[];
   rngSeed?: number;
   holdoutPercent?: number;
   nowMs?: number;
@@ -125,7 +134,8 @@ export async function orchestrateCase(
     .digest()
     .readUInt32BE(0);
   const rng = createSeededRandom(caseSeed);
-  const selected = selectArm(deps.banditArms, rng);
+  const arms = deps.getBanditArms?.(diagnosis.evidenceCode) ?? deps.banditArms;
+  const selected = selectArm(arms, rng);
   const arm = deps.playbookArms.find((a) => a.id === selected);
   if (!arm) throw new Error(`Selected bandit arm '${selected}' has no matching playbook arm`);
 
@@ -186,7 +196,7 @@ export async function orchestrateCase(
   }
 
   // PASS: execute immediately.
-  const finished = await executeAndFinish(recoveryCase, signal, arm, selected, deps, nowMs);
+  const finished = await executeAndFinish(recoveryCase, signal, arm, selected, arms, deps, nowMs);
   return { case: finished, diagnosis, selectedArm: selected, policyDecision: "PASS" };
 }
 
@@ -200,6 +210,7 @@ async function executeAndFinish(
   signal: RiskSignal,
   arm: PlaybookArm & { id: string; costPaise?: bigint },
   selected: string,
+  arms: Arm[],
   deps: OrchestratorDeps,
   nowMs: number,
 ): Promise<RecoveryCase> {
@@ -259,9 +270,9 @@ async function executeAndFinish(
 
   // Update bandit posterior based on the (simulated) outcome.
   const success = executionResult.status === "completed" && simulatedOutcome(caseId, TREATMENT_SUCCESS_RATE);
-  const armIndex = deps.banditArms.findIndex((a) => a.id === selected);
+  const armIndex = arms.findIndex((a) => a.id === selected);
   if (armIndex >= 0) {
-    deps.banditArms[armIndex] = updateArm(deps.banditArms[armIndex], success);
+    arms[armIndex] = updateArm(arms[armIndex], success);
   }
 
   recoveryCase = {
@@ -288,6 +299,10 @@ export interface PendingApproval {
   signal: RiskSignal;
   arm: PlaybookArm & { id: string; costPaise?: bigint };
   selectedArm: string;
+  /** The diagnosis's evidenceCode at plan time, carried across the human
+   * approval gap so the eventual posterior update lands back in the same
+   * contextual bucket it was drawn from. */
+  evidenceCode?: string;
 }
 
 /** A human approved a NEEDS_APPROVAL case: proceed to execution exactly as
@@ -303,11 +318,15 @@ export async function approveAndExecute(
     action: "approved",
     payload: { selectedArm: pending.selectedArm },
   });
+  const arms = pending.evidenceCode
+    ? (deps.getBanditArms?.(pending.evidenceCode) ?? deps.banditArms)
+    : deps.banditArms;
   const finished = await executeAndFinish(
     pending.case,
     pending.signal,
     pending.arm,
     pending.selectedArm,
+    arms,
     deps,
     nowMs,
   );

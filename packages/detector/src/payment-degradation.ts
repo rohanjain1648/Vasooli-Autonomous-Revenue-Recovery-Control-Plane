@@ -12,10 +12,25 @@ function getOrCreateCohort(state: PaymentDetectorState, cohort: string) {
       capturedPayments: 0,
       failedPayments: 0,
       windowSuccessRates: [],
+      errorCodeTally: new Map(),
     };
     state.cohorts.set(cohort, stats);
   }
   return stats;
+}
+
+/** The failure error code with the highest count this window, or null if
+ * no failures carried a code (e.g. an empty or all-success window). */
+function dominantErrorCode(tally: Map<string, number>): string | null {
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [code, count] of tally) {
+    if (count > bestCount) {
+      best = code;
+      bestCount = count;
+    }
+  }
+  return best;
 }
 
 /**
@@ -38,6 +53,9 @@ export function detectPaymentDegradation(
       stats.capturedPayments += 1;
     } else {
       stats.failedPayments += 1;
+      if (event.errorCode) {
+        stats.errorCodeTally.set(event.errorCode, (stats.errorCodeTally.get(event.errorCode) ?? 0) + 1);
+      }
     }
 
     if (stats.totalPayments % state.windowSize === 0) {
@@ -71,6 +89,7 @@ export function detectPaymentDegradation(
               cusumChangePointIndex: result.changePointIndex,
               cusumFinalLower: result.finalLower,
               cusumFinalUpper: result.finalUpper,
+              dominantErrorCode: dominantErrorCode(stats.errorCodeTally),
             },
           }),
         );
@@ -78,6 +97,7 @@ export function detectPaymentDegradation(
         // re-fire every window; a fresh baseline deviation must accumulate
         // again before the next signal.
         stats.windowSuccessRates = [];
+        stats.errorCodeTally = new Map();
       }
     }
   }

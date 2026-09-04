@@ -36,16 +36,47 @@ export class MockLlmProvider implements LlmProvider {
     return rendered;
   }
 
+  /**
+   * Derives a real, per-signal root-cause code from the detector's own
+   * evidence rather than a fixed one-per-category constant — this is what
+   * lets the bandit route by *why* a case is at risk, not just its
+   * category (see @vasooli/orchestrator's contextual arm selection). Each
+   * branch falls back to the old fixed code when the expected evidence
+   * field is absent, so a signal built with no evidence (as in tests)
+   * behaves exactly as before.
+   */
   private evidenceCodeFor(signal: RiskSignal): string {
+    const evidence = signal.evidence;
     switch (signal.category) {
-      case "payment_failure":
-        return "issuer_down";
-      case "checkout_abandonment":
-        return "checkout_timeout";
-      case "subscription_failure":
-        return "mandate_charge_failed";
-      case "b2b_receivable":
-        return "promise_to_pay_breach";
+      case "payment_failure": {
+        const dominant = evidence.dominantErrorCode;
+        return typeof dominant === "string" ? dominant : "issuer_down";
+      }
+      case "checkout_abandonment": {
+        // detectCheckoutAbandonment reports `ageMs`; the live demo feed's
+        // synthesized signals use `idleMs` for the same idea.
+        const idleMs = Number(evidence.ageMs ?? evidence.idleMs ?? NaN);
+        if (Number.isNaN(idleMs)) return "checkout_timeout";
+        return idleMs < 10 * 60 * 1000 ? "quick_bounce" : "cart_review_dropoff";
+      }
+      case "subscription_failure": {
+        const errorCode = evidence.errorCode;
+        return typeof errorCode === "string" ? errorCode : "mandate_charge_failed";
+      }
+      case "b2b_receivable": {
+        // Mirrors the aging tiers computed in
+        // @vasooli/detector's b2b-receivables.ts (agingBucket()).
+        switch (evidence.agingBucket) {
+          case "30":
+            return "early_reminder_needed";
+          case "60":
+            return "escalation_needed";
+          case "90+":
+            return "collections_needed";
+          default:
+            return "promise_to_pay_breach";
+        }
+      }
     }
   }
 }
