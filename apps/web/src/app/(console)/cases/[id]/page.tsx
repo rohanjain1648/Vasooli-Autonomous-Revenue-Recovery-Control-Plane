@@ -15,6 +15,7 @@ import {
   StateBadge,
 } from "@/components/Badges";
 import { Empty, PageIn, Skeleton } from "@/components/console/Shell";
+import { VoiceAgent } from "@/components/voice/VoiceAgent";
 
 const ACTOR_TONE: Record<string, string> = {
   orchestrator: "var(--color-ink-dim)",
@@ -214,6 +215,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ id: strin
             </section>
           )}
 
+          <VoiceAgent caseId={id} onPromiseRecorded={load} />
           <PromiseSection caseId={id} promises={promises} onRecorded={load} />
         </div>
 
