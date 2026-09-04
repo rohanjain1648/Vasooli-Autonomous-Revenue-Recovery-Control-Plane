@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "dotenv": "^16.4.7",
     "@vasooli/engine": "workspace:*",
     "@vasooli/llm": "workspace:*",
     "@vasooli/policy": "workspace:*",

@@ -1,3 +1,6 @@
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+import { config as loadEnv } from "dotenv";
 import { createLlmProvider } from "@vasooli/llm";
 import { createRazorpayClient } from "@vasooli/razorpay";
 import { PolicyEngine, defaultRules } from "@vasooli/policy";
@@ -5,6 +8,15 @@ import { loadPlaybookCatalog } from "./playbooks.js";
 import { EngineState } from "./state.js";
 import { SignalFeed } from "./signal-feed.js";
 import { buildServer } from "./server.js";
+
+// The standalone server is the one place credentials matter (the demo
+// script deliberately never loads them — see MockLlmProvider's own doc
+// comment on why demos stay offline and reproducible). .env lives at the
+// repo root, not here, so pnpm's per-package cwd can't find it on its
+// own; resolve relative to this file instead of relying on cwd. Safe to
+// do before createLlmProvider() etc. are called below — those only read
+// process.env when main() actually runs them, not at import time.
+loadEnv({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env") });
 
 async function main(): Promise<void> {
   const catalog = loadPlaybookCatalog();

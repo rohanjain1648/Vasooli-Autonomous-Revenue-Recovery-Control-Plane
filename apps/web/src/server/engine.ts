@@ -40,15 +40,31 @@ declare global {
  * visitor — starts from the same populated world.
  */
 async function warmUp(state: EngineState, feed: SignalFeed): Promise<EngineState> {
+  // A live LLM provider (OPENAI_API_KEY/GROQ_API_KEY set) can fail a given
+  // call for reasons that have nothing to do with this codebase — a rate
+  // limit, a transient network blip, a provider outage. One bad tick must
+  // not poison the whole engine: getState() awaits this promise, so an
+  // uncaught rejection here would fail every route until the process
+  // restarts. This mirrors the tolerance feed.start()'s own tick loop
+  // already has for exactly the same call, once the server is running —
+  // warmUp() was just never given the same protection.
   for (let i = 0; i < WARMUP_TICKS; i++) {
-    await feed.tick();
+    try {
+      await feed.tick();
+    } catch (err) {
+      console.error(`[engine] warmup tick ${i + 1}/${WARMUP_TICKS} failed, continuing:`, err);
+    }
   }
 
   // Resolve most of what is parked, so the wall has settled outcomes to
   // measure rather than a backlog of pending cases.
   const pending = state.listApprovals();
   for (const record of pending.slice(0, Math.max(0, pending.length - KEEP_PENDING))) {
-    await state.approve(record.case.id);
+    try {
+      await state.approve(record.case.id);
+    } catch (err) {
+      console.error(`[engine] warmup approval for case ${record.case.id} failed, leaving it pending:`, err);
+    }
   }
 
   feed.start(TICK_MS);

@@ -15,7 +15,12 @@ export function createLlmProvider(env: NodeJS.ProcessEnv = process.env): LlmProv
     return new OpenaiAdapter({
       apiKey: groqKey,
       baseUrl: "https://api.groq.com/openai/v1",
-      model: env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
+      // llama-3.3-70b-versatile was decommissioned from Groq's catalog at
+      // some point after this default was written (confirmed live against
+      // Groq's /v1/models — it's simply gone). gpt-oss-20b is Groq's
+      // current general-purpose model, verified against the exact prompt
+      // shape diagnose() sends.
+      model: env.GROQ_MODEL ?? "openai/gpt-oss-20b",
     });
   }
   const openaiKey = env.OPENAI_API_KEY;

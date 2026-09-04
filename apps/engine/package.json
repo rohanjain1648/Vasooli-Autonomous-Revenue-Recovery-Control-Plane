@@ -25,7 +25,8 @@
     "@vasooli/detector": "workspace:*",
     "fastify": "^5.1.0",
     "@fastify/cors": "^10.0.1",
-    "yaml": "^2.6.1"
+    "yaml": "^2.6.1",
+    "dotenv": "^16.4.7"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

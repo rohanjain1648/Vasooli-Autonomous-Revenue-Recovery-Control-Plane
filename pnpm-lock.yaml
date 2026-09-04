@@ -53,6 +53,9 @@ importers:
       '@vasooli/stats':
         specifier: workspace:*
         version: link:../../packages/stats
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
       fastify:
         specifier: ^5.1.0
         version: 5.12.1
@@ -84,6 +87,9 @@ importers:
       '@vasooli/razorpay':
         specifier: workspace:*
         version: link:../../packages/razorpay
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
       gsap:
         specifier: ^3.15.0
         version: 3.15.0
@@ -1174,6 +1180,10 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  dotenv@16.6.1:
+    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
 
   draco3d@1.5.7:
     resolution: {integrity: sha512-m6WCKt/erDXcw+70IJXnG7M3awwQPAsZvJGX5zY7beBqpELw6RDGkYVU0W43AFxye4pDZ5i2Lbyc/NNGqwjUVQ==}
@@ -2552,6 +2562,8 @@ snapshots:
       webgl-constants: 1.1.1
 
   detect-libc@2.1.2: {}
+
+  dotenv@16.6.1: {}
 
   draco3d@1.5.7: {}
 

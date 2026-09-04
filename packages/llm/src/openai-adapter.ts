@@ -2,6 +2,15 @@ import type { RiskSignal } from "@vasooli/core";
 import type { DiagnosisOutput, LlmProvider, PlaybookArm } from "./provider.js";
 import { isValidDiagnosis } from "./provider.js";
 
+/** RiskSignal.exposurePaise (and possibly fields inside its `evidence`
+ * bag) are bigints — plain JSON.stringify throws on those natively. This
+ * is a one-way serialization for a prompt, never deserialized back into
+ * a bigint, so a plain string coercion is correct (contrast with
+ * @vasooli/core's MoneyPaiseJson, which round-trips). */
+function stringifySignal(signal: RiskSignal): string {
+  return JSON.stringify(signal, (_key, value) => (typeof value === "bigint" ? value.toString() : value));
+}
+
 export interface OpenaiAdapterOptions {
   apiKey: string;
   model?: string;
@@ -43,7 +52,7 @@ export class OpenaiAdapter implements LlmProvider {
         model: this.model,
         messages: [
           { role: "system", content: DIAGNOSIS_SYSTEM_PROMPT },
-          { role: "user", content: JSON.stringify(signal) },
+          { role: "user", content: stringifySignal(signal) },
         ],
         temperature: 0,
       }),
