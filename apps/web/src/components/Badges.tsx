@@ -66,6 +66,35 @@ export function ArmGroupBadge({ armGroup }: { armGroup: string }) {
   );
 }
 
+const PROMISE_STATE_TONE: Record<string, string> = {
+  promised: "var(--color-treatment)",
+  partial: "var(--color-pending)",
+  honored: "var(--color-recovered)",
+  broken: "var(--color-blocked)",
+};
+
+export function PromiseStateBadge({ state }: { state: string }) {
+  const color = PROMISE_STATE_TONE[state] ?? "var(--color-ink-dim)";
+  return (
+    <span className="chip inline-flex items-center gap-1.5" style={tinted(color, true)}>
+      {state === "promised" && <span className="h-1 w-1 animate-pulse rounded-full bg-current" />}
+      {formatState(state)}
+    </span>
+  );
+}
+
+const CHANNEL_LABEL: Record<string, string> = {
+  voice: "Live voice",
+  ivr: "IVR call",
+  email: "Email",
+  sms: "SMS",
+  manual: "Manual",
+};
+
+export function ChannelBadge({ channel }: { channel: string }) {
+  return <span className="chip text-[var(--color-ink-dim)]">{CHANNEL_LABEL[channel] ?? channel}</span>;
+}
+
 export function DecisionBadge({ decision }: { decision?: string }) {
   if (!decision) return <span className="text-[var(--color-ink-dim)]">—</span>;
   const tone =

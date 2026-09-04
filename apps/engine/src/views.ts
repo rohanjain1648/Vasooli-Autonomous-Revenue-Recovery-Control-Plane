@@ -1,3 +1,4 @@
+import type { PromiseToPay } from "@vasooli/core";
 import type { CaseRecord, EngineState } from "./state.js";
 import { toJsonSafe } from "./serialize.js";
 
@@ -30,6 +31,18 @@ export function toCaseDetail(record: CaseRecord, state: EngineState) {
     needsApproval: record.pending !== undefined,
     pendingArm: record.pending?.arm,
     transitions: state.caseTransitions(record.case.id),
+  });
+}
+
+/** Enriches a promise with the category/entity of its case, so the
+ * promises list doesn't need a second round-trip per row to be readable. */
+export function toPromiseView(promise: PromiseToPay, state: EngineState) {
+  const record = state.getCase(promise.caseId);
+  return toJsonSafe({
+    ...promise,
+    category: record?.case.category,
+    entityId: record?.signal.entityId,
+    caseState: record?.case.state,
   });
 }
 

@@ -83,3 +83,140 @@ describe("EngineState.ingestSignal", () => {
     expect(typeof snapshot.incrementalPaise).toBe("string");
   });
 });
+
+describe("Promise-to-Pay", () => {
+  it("recordPromise returns null for a case that doesn't exist", () => {
+    const state = buildTestState();
+    expect(
+      state.recordPromise({
+        caseId: "does-not-exist",
+        promisedAmountPaise: 100n,
+        promisedForMs: DAYTIME_MS,
+        channel: "manual",
+      }),
+    ).toBeNull();
+  });
+
+  it("recordPromise creates a promise, appends a ledger entry, and surfaces it in listPromises", async () => {
+    const state = buildTestState();
+    const record = await state.ingestSignal(makeTestSignal(), DAYTIME_MS);
+
+    const promise = state.recordPromise({
+      caseId: record.case.id,
+      promisedAmountPaise: 300_00n,
+      promisedForMs: DAYTIME_MS + 86_400_000,
+      channel: "voice",
+      note: "Said they'd pay Friday.",
+      nowMs: DAYTIME_MS,
+    });
+
+    expect(promise).not.toBeNull();
+    expect(promise!.state).toBe("promised");
+    expect(state.listPromises({ caseId: record.case.id })).toHaveLength(1);
+    const actions = state.auditLog(false).entries.map((e) => e.action);
+    expect(actions).toContain("promise_recorded");
+    expect(state.auditLog(true).valid).toBe(true);
+  });
+
+  it("sweepPromises honors a promise once its case has recovered enough to cover it", async () => {
+    const state = buildTestState();
+    const record = await state.ingestSignal(makeTestSignal(), DAYTIME_MS);
+    // Force the outcome deterministically rather than depend on the
+    // bandit's simulated coin flip.
+    state.cases.set(record.case.id, {
+      ...record,
+      case: { ...record.case, state: "recovered", recoveredPaise: 500_00n },
+    });
+    const promise = state.recordPromise({
+      caseId: record.case.id,
+      promisedAmountPaise: 300_00n,
+      promisedForMs: DAYTIME_MS + 1000,
+      channel: "manual",
+      nowMs: DAYTIME_MS,
+    })!;
+
+    state.sweepPromises(DAYTIME_MS + 500);
+
+    expect(state.listPromises({ caseId: record.case.id })[0].state).toBe("honored");
+    expect(state.auditLog(false).entries.map((e) => e.action)).toContain("promise_honored");
+  });
+
+  it("sweepPromises breaks a promise once the case has failed", async () => {
+    const state = buildTestState();
+    const record = await state.ingestSignal(makeTestSignal(), DAYTIME_MS);
+    state.cases.set(record.case.id, {
+      ...record,
+      case: { ...record.case, state: "failed", recoveredPaise: 0n },
+    });
+    state.recordPromise({
+      caseId: record.case.id,
+      promisedAmountPaise: 300_00n,
+      promisedForMs: DAYTIME_MS + 86_400_000,
+      channel: "manual",
+      nowMs: DAYTIME_MS,
+    });
+
+    state.sweepPromises(DAYTIME_MS + 1000); // long before the promised date
+
+    expect(state.listPromises({ caseId: record.case.id })[0].state).toBe("broken");
+  });
+
+  it("sweepPromises breaks a promise once its due date plus grace has passed with no recovery", async () => {
+    const state = buildTestState();
+    const record = await state.ingestSignal(makeTestSignal(), DAYTIME_MS);
+    state.cases.set(record.case.id, {
+      ...record,
+      case: { ...record.case, state: "awaiting_approval", recoveredPaise: 0n },
+    });
+    const dueMs = DAYTIME_MS + 60_000;
+    state.recordPromise({
+      caseId: record.case.id,
+      promisedAmountPaise: 300_00n,
+      promisedForMs: dueMs,
+      channel: "manual",
+      nowMs: DAYTIME_MS,
+    });
+
+    state.sweepPromises(dueMs + 1_000, 10_000); // past due, but still inside grace
+    expect(state.listPromises({ caseId: record.case.id })[0].state).toBe("promised");
+
+    state.sweepPromises(dueMs + 20_000, 10_000); // past due + grace
+    expect(state.listPromises({ caseId: record.case.id })[0].state).toBe("broken");
+  });
+
+  it("promisesSummary counts each bucket and computes the honor rate over resolved promises only", async () => {
+    const state = buildTestState();
+    const recovered = await state.ingestSignal(makeTestSignal(), DAYTIME_MS);
+    const failed = await state.ingestSignal(makeTestSignal(), DAYTIME_MS);
+    state.cases.set(recovered.case.id, {
+      ...recovered,
+      case: { ...recovered.case, state: "recovered", recoveredPaise: 500_00n },
+    });
+    state.cases.set(failed.case.id, {
+      ...failed,
+      case: { ...failed.case, state: "failed", recoveredPaise: 0n },
+    });
+    state.recordPromise({
+      caseId: recovered.case.id,
+      promisedAmountPaise: 300_00n,
+      promisedForMs: DAYTIME_MS + 1000,
+      channel: "manual",
+      nowMs: DAYTIME_MS,
+    });
+    state.recordPromise({
+      caseId: failed.case.id,
+      promisedAmountPaise: 300_00n,
+      promisedForMs: DAYTIME_MS + 86_400_000,
+      channel: "manual",
+      nowMs: DAYTIME_MS,
+    });
+    state.sweepPromises(DAYTIME_MS + 500);
+
+    const summary = state.promisesSummary();
+    expect(summary.total).toBe(2);
+    expect(summary.honored).toBe(1);
+    expect(summary.broken).toBe(1);
+    expect(summary.pending).toBe(0);
+    expect(summary.honorRate).toBe(0.5);
+  });
+});

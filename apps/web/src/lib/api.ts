@@ -98,6 +98,33 @@ export interface ExperimentCohort {
   rateInterval: { diff: number; lower: number; upper: number };
 }
 
+export type PromiseChannel = "voice" | "ivr" | "email" | "sms" | "manual";
+export type PromiseState = "promised" | "honored" | "broken" | "partial";
+
+export interface PromiseView {
+  id: string;
+  caseId: string;
+  promisedAmountPaise: string;
+  promisedForMs: number;
+  channel: PromiseChannel;
+  state: PromiseState;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  category?: string;
+  entityId?: string;
+  caseState?: string;
+}
+
+export interface PromisesSummary {
+  total: number;
+  pending: number;
+  partial: number;
+  honored: number;
+  broken: number;
+  honorRate: number | null;
+}
+
 export const api = {
   metrics: () => request<MetricsSnapshot>("/api/metrics"),
   cases: (filter: { state?: string; category?: string; limit?: number } = {}) => {
@@ -114,4 +141,20 @@ export const api = {
   reject: (id: string) => request<{ ok: true; case: RecoveryCaseView }>(`/api/approvals/${id}/reject`, { method: "POST" }),
   audit: (verify: boolean) => request<{ entries: LedgerEntryView[]; valid?: boolean; firstBrokenIndex?: number | null }>(`/api/audit?verify=${verify}`),
   experiments: () => request<ExperimentCohort[]>("/api/experiments"),
+  promises: (filter: { state?: string; caseId?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (filter.state) params.set("state", filter.state);
+    if (filter.caseId) params.set("caseId", filter.caseId);
+    const qs = params.toString();
+    return request<PromiseView[]>(`/api/promises${qs ? `?${qs}` : ""}`);
+  },
+  promisesSummary: () => request<PromisesSummary>("/api/promises/summary"),
+  recordPromise: (
+    caseId: string,
+    input: { promisedAmountPaise: string; promisedForMs: number; channel: PromiseChannel; note?: string },
+  ) =>
+    request<{ ok: true; promise: PromiseView }>(`/api/cases/${caseId}/promise`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 };

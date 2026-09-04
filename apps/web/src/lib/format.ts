@@ -23,8 +23,8 @@ export function formatPercent(rate: number | undefined | null, digits = 1): stri
   return `${(rate * 100).toFixed(digits)}%`;
 }
 
-export function formatDateTime(iso: string | undefined | null): string {
-  if (!iso) return "—";
+export function formatDateTime(iso: string | number | undefined | null): string {
+  if (iso === undefined || iso === null || iso === "") return "—";
   return new Date(iso).toLocaleString("en-IN", {
     day: "2-digit",
     month: "short",

@@ -7,6 +7,7 @@ import { approvalsRoutes } from "./routes/approvals.js";
 import { auditRoutes } from "./routes/audit.js";
 import { experimentsRoutes } from "./routes/experiments.js";
 import { eventsRoutes } from "./routes/events.js";
+import { promisesRoutes } from "./routes/promises.js";
 
 /** Builds (but does not start listening on) the Fastify app. Split out
  * from index.ts's bootstrap so tests can `fastify.inject()` against a
@@ -24,6 +25,7 @@ export async function buildServer(state: EngineState) {
   await auditRoutes(fastify, state);
   await experimentsRoutes(fastify, state);
   await eventsRoutes(fastify, state);
+  await promisesRoutes(fastify, state);
 
   return fastify;
 }

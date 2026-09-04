@@ -13,6 +13,7 @@ const TABS = [
   { href: "/dashboard", label: "Money wall" },
   { href: "/cases", label: "Cases" },
   { href: "/approvals", label: "Approvals" },
+  { href: "/promises", label: "Promises" },
   { href: "/audit", label: "Audit" },
   { href: "/experiments", label: "Experiments" },
 ];

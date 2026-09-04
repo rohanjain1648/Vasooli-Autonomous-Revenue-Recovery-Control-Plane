@@ -16,4 +16,4 @@ export { SignalFeed } from "./signal-feed.js";
 export { buildPlaybookCatalog, loadPlaybookCatalog } from "./playbooks.js";
 export type { PlaybookCatalog, CatalogArm, RawPlaybook, RawPlaybookArm } from "./playbooks.js";
 export { toJsonSafe } from "./serialize.js";
-export { toCaseSummary, toCaseDetail, toApprovalView } from "./views.js";
+export { toCaseSummary, toCaseDetail, toApprovalView, toPromiseView } from "./views.js";

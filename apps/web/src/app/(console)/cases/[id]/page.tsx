@@ -3,10 +3,17 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { api, type CaseDetailView, type LedgerEntryView } from "@/lib/api";
+import { api, type CaseDetailView, type LedgerEntryView, type PromiseView } from "@/lib/api";
 import { useEngineEvents } from "@/lib/useEngineEvents";
 import { formatDateTime, formatPaise } from "@/lib/format";
-import { ArmGroupBadge, CategoryBadge, DecisionBadge, StateBadge } from "@/components/Badges";
+import {
+  ArmGroupBadge,
+  CategoryBadge,
+  ChannelBadge,
+  DecisionBadge,
+  PromiseStateBadge,
+  StateBadge,
+} from "@/components/Badges";
 import { Empty, PageIn, Skeleton } from "@/components/console/Shell";
 
 const ACTOR_TONE: Record<string, string> = {
@@ -23,12 +30,18 @@ type PolicyVerdict = { ruleId: string; decision: string; reason: string };
 export default function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [record, setRecord] = useState<CaseDetailView | null>(null);
+  const [promises, setPromises] = useState<PromiseView[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setRecord(await api.case(id));
+      const [caseDetail, casePromises] = await Promise.all([
+        api.case(id),
+        api.promises({ caseId: id }),
+      ]);
+      setRecord(caseDetail);
+      setPromises(casePromises);
       setError(null);
     } catch {
       setError("This case could not be loaded. The engine may not be running.");
@@ -200,6 +213,8 @@ export default function CaseDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             </section>
           )}
+
+          <PromiseSection caseId={id} promises={promises} onRecorded={load} />
         </div>
 
         <section className="panel lg:col-span-7">
@@ -292,6 +307,138 @@ function TimelineRow({
         </AnimatePresence>
       </div>
     </motion.li>
+  );
+}
+
+function PromiseSection({
+  caseId,
+  promises,
+  onRecorded,
+}: {
+  caseId: string;
+  promises: PromiseView[];
+  onRecorded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [daysOut, setDaysOut] = useState(3);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async () => {
+    const rupees = Number(amount);
+    if (!rupees || rupees <= 0) return;
+    setSubmitting(true);
+    try {
+      await api.recordPromise(caseId, {
+        promisedAmountPaise: String(Math.round(rupees * 100)),
+        promisedForMs: Date.now() + daysOut * 24 * 60 * 60 * 1000,
+        channel: "manual",
+        note: note || undefined,
+      });
+      setAmount("");
+      setNote("");
+      setOpen(false);
+      onRecorded();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="panel p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="label text-[var(--color-ink-dim)]">Promise to pay</span>
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="chip border border-[var(--color-ink-rule)] transition-colors hover:border-[var(--color-treatment)] hover:text-[var(--color-treatment)]"
+          >
+            Log a promise
+          </button>
+        )}
+      </div>
+
+      {promises.length === 0 && !open && (
+        <p className="text-sm text-[var(--color-ink-dim)]">
+          Nothing captured yet. Recorded here whenever the customer commits to a date — by voice,
+          IVR, or a human noting it down.
+        </p>
+      )}
+
+      {promises.length > 0 && (
+        <ul className="space-y-3">
+          {promises.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span className="figure font-medium">{formatPaise(p.promisedAmountPaise)}</span>
+              <span className="text-[var(--color-ink-dim)]">by {formatDateTime(p.promisedForMs)}</span>
+              <ChannelBadge channel={p.channel} />
+              <PromiseStateBadge state={p.state} />
+              {p.note && <span className="w-full text-xs text-[var(--color-ink-dim)]">{p.note}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {open && (
+        <div className="mt-4 space-y-3 border-t border-[var(--color-ink-rule)] pt-4">
+          <div className="flex gap-3">
+            <label className="flex-1">
+              <span className="label mb-1 block text-[10px] text-[var(--color-ink-dim)]">
+                Amount (₹)
+              </span>
+              <input
+                type="number"
+                min={1}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="figure w-full rounded border border-[var(--color-ink-rule)] bg-[var(--color-ink-deep)] px-2.5 py-1.5 text-sm"
+              />
+            </label>
+            <label className="w-28">
+              <span className="label mb-1 block text-[10px] text-[var(--color-ink-dim)]">
+                Days out
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={daysOut}
+                onChange={(e) => setDaysOut(Number(e.target.value) || 1)}
+                className="figure w-full rounded border border-[var(--color-ink-rule)] bg-[var(--color-ink-deep)] px-2.5 py-1.5 text-sm"
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="label mb-1 block text-[10px] text-[var(--color-ink-dim)]">
+              Note (optional)
+            </span>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="What the customer said"
+              className="w-full rounded border border-[var(--color-ink-rule)] bg-[var(--color-ink-deep)] px-2.5 py-1.5 text-sm"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button
+              disabled={submitting || !amount}
+              onClick={submit}
+              className="rounded-full px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40"
+              style={{ background: "var(--color-treatment)", color: "var(--color-ink)" }}
+            >
+              Save promise
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              className="rounded-full border border-[var(--color-ink-rule)] px-4 py-2 text-sm font-medium transition-colors hover:text-[var(--color-paper)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

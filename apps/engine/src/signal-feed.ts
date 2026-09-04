@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { LeakageCategory } from "@vasooli/core";
+import type { LeakageCategory, PromiseChannel } from "@vasooli/core";
 import {
   EventGenerator,
   createSeededRandom,
@@ -11,7 +11,7 @@ import {
   createPaymentDetectorState,
   makeSignal,
 } from "@vasooli/detector";
-import type { EngineState } from "./state.js";
+import type { EngineState, CaseRecord } from "./state.js";
 
 const SYNTHETIC_CUSTOMERS = 40;
 
@@ -75,9 +75,49 @@ export class SignalFeed {
       "b2b_receivable",
     ] as const) {
       if (this.rng() < 0.35) {
-        await this.state.ingestSignal(this.synthesize(category), this.simMs);
+        const record = await this.state.ingestSignal(this.synthesize(category), this.simMs);
+        // Only the categories a human/IVR actually chases produce a
+        // spoken or written commitment; checkout abandonment is
+        // recovered (or not) without ever asking the customer to promise
+        // anything.
+        if ((category === "subscription_failure" || category === "b2b_receivable") && this.rng() < 0.5) {
+          this.maybeRecordPromise(record, category);
+        }
       }
     }
+
+    // Time-based resolution (a promise whose due date has passed with no
+    // payment) needs wall-clock progress, not just a fresh signal — so
+    // this runs every tick, not only when something new was ingested.
+    // Grace is compressed relative to the 24h production default so a
+    // promise can actually be seen resolving within a live demo session.
+    this.state.sweepPromises(this.simMs, 2 * 60 * 1000);
+  }
+
+  /** Logs a plausible Promise-to-Pay against a just-ingested case, with a
+   * due date a few *simulated* minutes out — compressed from the
+   * real-world "a few days" a live channel would use, so the tracker
+   * visibly resolves during a demo instead of only in production. */
+  private maybeRecordPromise(record: CaseRecord, category: LeakageCategory): void {
+    const dueInMs = (1 + this.rng() * 4) * 60_000; // 1-5 sim-minutes out
+    const amountFraction = 0.6 + this.rng() * 0.4; // sometimes a partial commitment
+    const promisedAmountPaise = BigInt(
+      Math.floor(Number(record.case.exposurePaise) * amountFraction),
+    );
+    const channel: PromiseChannel = category === "subscription_failure" ? "ivr" : "manual";
+
+    this.state.recordPromise({
+      caseId: record.case.id,
+      promisedAmountPaise,
+      promisedForMs: Math.floor(this.simMs + dueInMs),
+      channel,
+      note:
+        channel === "ivr"
+          ? "Customer confirmed via the automated Hinglish reminder call."
+          : "Customer told the collections agent they would pay by this date.",
+      actor: channel === "ivr" ? "ivr" : "human",
+      nowMs: this.simMs,
+    });
   }
 
   private synthesize(category: LeakageCategory): ReturnType<typeof makeSignal> {

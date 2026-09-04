@@ -8,6 +8,8 @@ export type EngineEvent =
   | { type: "case_transition"; caseId: string; state: string; action: string; payload: unknown }
   | { type: "approval_pending"; caseId: string; reason: string }
   | { type: "approval_resolved"; caseId: string; decision: "approved" | "rejected" }
+  | { type: "promise_recorded"; caseId: string; promiseId: string; channel: string }
+  | { type: "promise_resolved"; caseId: string; promiseId: string; state: "honored" | "broken" }
   | { type: "metrics_update"; metrics: unknown };
 
 /** Thin typed wrapper over Node's EventEmitter so SSE subscribers get a
