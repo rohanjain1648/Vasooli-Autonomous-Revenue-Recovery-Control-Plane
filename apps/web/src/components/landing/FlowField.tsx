@@ -33,6 +33,10 @@ const vertexShader = /* glsl */ `
   uniform float uReveal;
   uniform float uPixelRatio;
 
+  // Interpolated from the JS GATE constant below, so the shader and the
+  // rest of the component never drift out of sync.
+  const float GATE = ${GATE};
+
   varying vec3 vColor;
   varying float vAlpha;
 

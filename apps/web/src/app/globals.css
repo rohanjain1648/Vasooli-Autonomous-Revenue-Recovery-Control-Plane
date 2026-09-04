@@ -20,12 +20,12 @@
   --color-rule: #c9c5b8;
 
   /* --- Ink (dark surface + type) --- */
-  --color-ink: #16121f; /* deep ink-violet, never pure black */
-  --color-ink-deep: #0e0b15;
-  --color-ink-surface: #191527;
-  --color-ink-raised: #221c33;
-  --color-ink-rule: #2e2743;
-  --color-ink-dim: #948ca8;
+  --color-ink: #1a1815; /* warm charcoal, never blue-black */
+  --color-ink-deep: #100f0d;
+  --color-ink-surface: #1f1d19;
+  --color-ink-raised: #292620;
+  --color-ink-rule: #383430;
+  --color-ink-dim: #9a938a;
 
   /* --- The pair. Everything hangs off these two. --- */
   --color-treatment: #e0a03a; /* marigold: the agent acted */
