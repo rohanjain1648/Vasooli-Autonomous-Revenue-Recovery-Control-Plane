@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, it, expect } from "vitest";
 import type { RiskSignal } from "@vasooli/core";
-import { PolicyEngine, defaultRules } from "@vasooli/policy";
+import { PolicyEngine, defaultRules, confidenceLadderRule } from "@vasooli/policy";
 import { MockLlmProvider } from "@vasooli/llm";
 import type { PlaybookArm } from "@vasooli/llm";
 import { FakeRazorpayClient } from "@vasooli/razorpay";
@@ -198,6 +198,26 @@ describe("contextual bandit (getBanditArms)", () => {
 
     expect(contextArms[0].alpha + contextArms[0].beta).toBe(3);
     expect(deps.banditArms[0].alpha + deps.banditArms[0].beta).toBe(2); // untouched
+  });
+});
+
+describe("confidence ladder (opt-in policy rule)", () => {
+  it("requires approval for a fresh arm, then PASSes once it has enough resolved trials", async () => {
+    const ladderPolicy = new PolicyEngine([...defaultRules(), confidenceLadderRule(3)]);
+
+    // Fresh arm: alpha=1,beta=1 -> armTrials=0 -> below the threshold.
+    const freshDeps = makeDeps({ policyEngine: ladderPolicy });
+    const freshResult = await orchestrateCase(makeSignal(), freshDeps);
+    expect(freshResult.policyDecision).toBe("NEEDS_APPROVAL");
+    expect(freshResult.case.state).toBe("awaiting_approval");
+
+    // Same arm, but with enough resolved history (alpha+beta-2 >= 3).
+    const provenDeps = makeDeps({
+      policyEngine: ladderPolicy,
+      banditArms: [{ id: "email_nudge", alpha: 3, beta: 2 }], // 3 trials
+    });
+    const provenResult = await orchestrateCase(makeSignal(), provenDeps);
+    expect(provenResult.policyDecision).toBe("PASS");
   });
 });
 

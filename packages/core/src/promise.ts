@@ -29,6 +29,15 @@ export const PromiseToPaySchema = z.object({
   /** Free-text context — e.g. a transcript excerpt or the customer's own
    * words — kept for the human reviewing a broken promise. */
   note: z.string().optional(),
+  /** When RBI's e-mandate pre-debit notice went out for the scheduled
+   * retry below — undefined until it has actually been sent. See
+   * @vasooli/policy's preDebitNotificationRule, the gate that reads this. */
+  notifiedAt: z.string().datetime().optional(),
+  /** When the promise-driven retry charge was attempted against this
+   * promise's due date — distinct from `state` turning honored/broken,
+   * which can also happen organically (the case recovers on its own
+   * before the retry ever fires). */
+  retryAttemptedAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

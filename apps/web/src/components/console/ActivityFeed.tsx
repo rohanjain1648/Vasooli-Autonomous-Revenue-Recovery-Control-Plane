@@ -27,6 +27,9 @@ const ACTION_TONE: Record<string, string> = {
   failed: "var(--color-blocked)",
   stopped: "var(--color-blocked)",
   deferred: "var(--color-pending)",
+  circuit_breaker_tripped: "var(--color-blocked)",
+  circuit_breaker_reset: "var(--color-recovered)",
+  pre_debit_notice_sent: "var(--color-treatment)",
 };
 
 /**
@@ -63,14 +66,24 @@ export function ActivityFeed({ limit = 14 }: { limit?: number }) {
     } else if (event.type === "approval_resolved") {
       action = event.decision;
       detail = "by a person";
+    } else if (event.type === "circuit_breaker_tripped") {
+      action = "circuit_breaker_tripped";
+      detail = `${event.trippedBy} — ${event.reason}`;
+    } else if (event.type === "circuit_breaker_reset") {
+      action = "circuit_breaker_reset";
+      detail = "resumed by a person";
+    } else if (event.type === "promise_notice_sent") {
+      action = "pre_debit_notice_sent";
+      detail = "RBI 24h notice — retry cannot fire before it clears";
     }
 
+    const caseId = "caseId" in event ? event.caseId : "GLOBAL";
     setCount((n) => n + 1);
     setItems((prev) =>
       [
         {
-          key: `${event.caseId}-${action}-${performance.now()}`,
-          caseId: event.caseId,
+          key: `${caseId}-${action}-${performance.now()}`,
+          caseId,
           action,
           detail,
           tone: ACTION_TONE[action] ?? "var(--color-ink-dim)",
@@ -112,29 +125,7 @@ export function ActivityFeed({ limit = 14 }: { limit?: number }) {
                   transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                   className="border-b border-[var(--color-ink-rule)] last:border-0"
                 >
-                  <Link
-                    href={`/cases/${item.caseId}`}
-                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--color-ink-raised)]"
-                  >
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ background: item.tone }}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs" style={{ color: item.tone }}>
-                        {item.action}
-                      </span>
-                      {item.detail && (
-                        <span className="block truncate text-[11px] text-[var(--color-ink-dim)]">
-                          {item.detail}
-                        </span>
-                      )}
-                    </span>
-                    <span className="figure shrink-0 text-[10px] text-[var(--color-ink-dim)]">
-                      {item.caseId.slice(0, 6)}
-                    </span>
-                  </Link>
+                  <ActivityRow item={item} />
                 </motion.li>
               ))}
             </AnimatePresence>
@@ -142,5 +133,37 @@ export function ActivityFeed({ limit = 14 }: { limit?: number }) {
         )}
       </div>
     </div>
+  );
+}
+
+function ActivityRow({ item }: { item: Item }) {
+  const inner = (
+    <>
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: item.tone }} aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs" style={{ color: item.tone }}>
+          {item.action}
+        </span>
+        {item.detail && (
+          <span className="block truncate text-[11px] text-[var(--color-ink-dim)]">{item.detail}</span>
+        )}
+      </span>
+      <span className="figure shrink-0 text-[10px] text-[var(--color-ink-dim)]">
+        {item.caseId.slice(0, 6)}
+      </span>
+    </>
+  );
+
+  // GLOBAL events (the circuit breaker) have no case to link to.
+  if (item.caseId === "GLOBAL") {
+    return <div className="flex items-center gap-3 px-4 py-2.5">{inner}</div>;
+  }
+  return (
+    <Link
+      href={`/cases/${item.caseId}`}
+      className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--color-ink-raised)]"
+    >
+      {inner}
+    </Link>
   );
 }

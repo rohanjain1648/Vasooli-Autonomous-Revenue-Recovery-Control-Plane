@@ -6,7 +6,7 @@ import {
   buildPlaybookCatalog,
   computeMetricsSnapshot,
 } from "@vasooli/engine";
-import { PolicyEngine, defaultRules } from "@vasooli/policy";
+import { PolicyEngine, defaultRules, confidenceLadderRule, preDebitNotificationRule } from "@vasooli/policy";
 import { createLlmProvider } from "@vasooli/llm";
 import { createRazorpayClient } from "@vasooli/razorpay";
 import { PLAYBOOKS } from "./playbooks.generated";
@@ -72,13 +72,21 @@ async function warmUp(state: EngineState, feed: SignalFeed): Promise<EngineState
 }
 
 function create(): Instance {
+  // See apps/engine/src/index.ts's identical line for why these numbers
+  // are wired in here specifically rather than living in defaultRules().
+  const promiseRetryNoticeMs = 90_000;
   const state = new EngineState({
     llmProvider: createLlmProvider(),
     razorpayClient: createRazorpayClient(),
-    policyEngine: new PolicyEngine(defaultRules()),
+    policyEngine: new PolicyEngine([
+      ...defaultRules(),
+      confidenceLadderRule(),
+      preDebitNotificationRule(promiseRetryNoticeMs),
+    ]),
     catalog: buildPlaybookCatalog(PLAYBOOKS),
     rngSeed: 1,
     holdoutPercent: 20,
+    promiseRetryNoticeMs,
   });
 
   const feed = new SignalFeed(state, 42);

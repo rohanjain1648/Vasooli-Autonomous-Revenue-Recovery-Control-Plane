@@ -76,15 +76,6 @@ export function Closing() {
 
       <Reveal delay={0.2}>
         <div className="rule-t mt-20 grid gap-8 pt-8 sm:grid-cols-2 md:grid-cols-4">
-          <div>
-            <div className="label mb-3 text-[var(--color-ink)]/40">Run it yourself</div>
-            <code className="figure block rounded bg-[var(--color-paper-sunk)] px-3 py-2 text-xs">
-              pnpm demo
-            </code>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--color-ink)]/50">
-              Seeded, offline, byte-identical on every run.
-            </p>
-          </div>
           <FooterLinks
             title="Console"
             links={[

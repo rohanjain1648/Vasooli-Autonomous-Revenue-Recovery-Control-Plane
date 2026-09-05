@@ -117,6 +117,75 @@ export function humanApprovalForHighRiskRule(): PolicyRule {
   };
 }
 
+/**
+ * The confidence ladder: an arm that hasn't resolved enough outcomes yet
+ * *for this specific root cause* requires a human to sign off, exactly
+ * like a high-risk action would — not because the action itself is risky,
+ * but because the bandit's posterior for this segment is still close to
+ * its uninformative prior. As outcomes accumulate past `minTrials`, the
+ * identical action starts auto-passing: autonomy is earned per
+ * (category, evidenceCode) bucket, not granted by a config flag. Never
+ * part of `defaultRules()` — it changes when a case can pass, which
+ * every autonomy-focused test and the seeded `pnpm demo` batch already
+ * assert against; wired in only where a caller opts in explicitly (the
+ * two live-server bootstraps).
+ */
+export function confidenceLadderRule(minTrials = 5): PolicyRule {
+  return {
+    id: "confidence_ladder",
+    name: "Confidence Ladder",
+    description: `Requires human approval until the selected arm has resolved at least ${minTrials} outcome(s) for this root cause`,
+    evaluate(context: PolicyContext): PolicyRuleResult | null {
+      if (context.armTrials === undefined || context.armTrials >= minTrials) return null;
+      return {
+        ruleId: "confidence_ladder",
+        decision: "NEEDS_APPROVAL",
+        reason: `Only ${context.armTrials} resolved outcome(s) so far for this arm on this root cause — below the ${minTrials}-trial confidence threshold`,
+      };
+    },
+  };
+}
+
+/**
+ * RBI's e-mandate pre-debit notification rule: a scheduled Promise-to-Pay
+ * retry charge may not execute until a pre-debit notice has been out for
+ * at least `noticeMs` (24h, RBI's additional-factor-of-authentication
+ * circular on recurring e-mandates) — "she said Tuesday, we notify
+ * Monday, we charge Tuesday, not before." Only ever evaluates
+ * `isPromiseRetry` contexts; a normal signal-triggered action always gets
+ * `null` (not applicable) here. Never part of `defaultRules()` for the
+ * same reason confidenceLadderRule isn't — it's wired in only where a
+ * caller opts in explicitly (the two live-server bootstraps), each with
+ * its own notice window so a live demo can compress 24h into something
+ * actually watchable without a real deploy pretending 24h ever elapsed.
+ */
+export function preDebitNotificationRule(noticeMs = 24 * 60 * 60 * 1000): PolicyRule {
+  return {
+    id: "rbi_pre_debit_notice",
+    name: "RBI Pre-Debit Notification",
+    description: `A Promise-to-Pay retry requires a pre-debit notice at least ${noticeMs}ms old`,
+    evaluate(context: PolicyContext): PolicyRuleResult | null {
+      if (!context.isPromiseRetry) return null;
+      if (context.preDebitNoticeSentAtMs === undefined) {
+        return {
+          ruleId: "rbi_pre_debit_notice",
+          decision: "BLOCK",
+          reason: "No RBI pre-debit notice has been sent for this promise — the retry cannot proceed",
+        };
+      }
+      const elapsedMs = context.nowMs - context.preDebitNoticeSentAtMs;
+      if (elapsedMs < noticeMs) {
+        return {
+          ruleId: "rbi_pre_debit_notice",
+          decision: "DEFER",
+          reason: `Only ${elapsedMs}ms since the pre-debit notice — RBI requires at least ${noticeMs}ms`,
+        };
+      }
+      return null;
+    },
+  };
+}
+
 /** The default rule set used unless a caller supplies its own. */
 export function defaultRules(): PolicyRule[] {
   return [

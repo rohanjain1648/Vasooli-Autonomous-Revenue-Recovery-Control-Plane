@@ -68,3 +68,48 @@ describe("Ledger", () => {
     expect(entryA.hash).toBe(entryB.hash);
   });
 });
+
+describe("Ledger demo tamper/restore", () => {
+  function threeEntryLedger(): Ledger {
+    const ledger = new Ledger();
+    ledger.append({ actor: "system", caseId: "c1", action: "detected", payload: {} });
+    ledger.append({ actor: "agent", caseId: "c1", action: "diagnosed", payload: {} });
+    ledger.append({ actor: "policy", caseId: "c1", action: "policy_evaluated", payload: {} });
+    return ledger;
+  }
+
+  it("demoTamper breaks verify() at the tampered index", () => {
+    const ledger = threeEntryLedger();
+    const result = ledger.demoTamper(1);
+    expect(result.ok).toBe(true);
+    expect(ledger.verify()).toEqual({ valid: false, firstBrokenIndex: 1 });
+    expect(ledger.demoTamperedIndex()).toBe(1);
+  });
+
+  it("demoRestore undoes the tamper exactly, verify() passes again", () => {
+    const ledger = threeEntryLedger();
+    ledger.demoTamper(1);
+    const restored = ledger.demoRestore();
+    expect(restored.ok).toBe(true);
+    expect(ledger.verify()).toEqual({ valid: true, firstBrokenIndex: null });
+    expect(ledger.demoTamperedIndex()).toBeNull();
+  });
+
+  it("refuses a second tamper while one is already pending", () => {
+    const ledger = threeEntryLedger();
+    ledger.demoTamper(0);
+    const second = ledger.demoTamper(2);
+    expect(second.ok).toBe(false);
+  });
+
+  it("refuses an out-of-range index", () => {
+    const ledger = threeEntryLedger();
+    const result = ledger.demoTamper(99);
+    expect(result.ok).toBe(false);
+  });
+
+  it("demoRestore on a clean chain is a no-op", () => {
+    const ledger = threeEntryLedger();
+    expect(ledger.demoRestore()).toEqual({ ok: false });
+  });
+});

@@ -138,6 +138,13 @@ export async function orchestrateCase(
   const selected = selectArm(arms, rng);
   const arm = deps.playbookArms.find((a) => a.id === selected);
   if (!arm) throw new Error(`Selected bandit arm '${selected}' has no matching playbook arm`);
+  const selectedArmPosterior = arms.find((a) => a.id === selected);
+  // Beta(1,1) is the uninformative prior this bandit starts every arm from
+  // (see EngineState.armsForCategory), so alpha+beta-2 recovers the count
+  // of actual resolved observations behind the posterior.
+  const armTrials = selectedArmPosterior
+    ? selectedArmPosterior.alpha + selectedArmPosterior.beta - 2
+    : undefined;
 
   recoveryCase = { ...recoveryCase, state: transition("diagnosing", "planned") };
   deps.ledger.append({
@@ -156,6 +163,7 @@ export async function orchestrateCase(
     estimatedRecoverablePaise: signal.exposurePaise,
     actionCostPaise: arm.costPaise ?? (arm.name === "control" ? 0n : 100n),
     isHighRiskAction: arm.requiresApproval,
+    armTrials,
   };
   const evaluation = deps.policyEngine.evaluate(policyContext);
   deps.ledger.append({

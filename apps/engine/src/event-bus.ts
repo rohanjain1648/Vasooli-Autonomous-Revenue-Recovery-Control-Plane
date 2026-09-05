@@ -10,6 +10,9 @@ export type EngineEvent =
   | { type: "approval_resolved"; caseId: string; decision: "approved" | "rejected" }
   | { type: "promise_recorded"; caseId: string; promiseId: string; channel: string }
   | { type: "promise_resolved"; caseId: string; promiseId: string; state: "honored" | "broken" }
+  | { type: "promise_notice_sent"; caseId: string; promiseId: string }
+  | { type: "circuit_breaker_tripped"; reason: string; trippedBy: "auto" | "manual" }
+  | { type: "circuit_breaker_reset" }
   | { type: "metrics_update"; metrics: unknown };
 
 /** Thin typed wrapper over Node's EventEmitter so SSE subscribers get a

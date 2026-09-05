@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { api } from "@/lib/api";
+import type { CircuitBreakerStatus } from "@/lib/api";
 import { useEngineEvents } from "@/lib/useEngineEvents";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import type { Source } from "@/lib/useEngineData";
@@ -22,6 +23,8 @@ export function ConsoleNav() {
   const pathname = usePathname() ?? "";
   const [source, setSource] = useState<Source>("connecting");
   const [pending, setPending] = useState(0);
+  const [breaker, setBreaker] = useState<CircuitBreakerStatus | null>(null);
+  const [breakerBusy, setBreakerBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,13 +44,53 @@ export function ConsoleNav() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .breaker()
+      .then((status) => {
+        if (!cancelled) setBreaker(status);
+      })
+      .catch(() => {
+        // Not reachable yet — the periodic approvals check above will
+        // eventually flip `source`, and the banner simply stays hidden.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // The approvals count has to be right the moment a case parks or clears,
   // otherwise the badge argues with the page the reviewer is looking at.
   useEngineEvents((event) => {
     if (event.type === "approval_pending") setPending((n) => n + 1);
     if (event.type === "approval_resolved") setPending((n) => Math.max(0, n - 1));
+    if (event.type === "circuit_breaker_tripped") {
+      setBreaker({ tripped: true, reason: event.reason, trippedBy: event.trippedBy });
+    }
+    if (event.type === "circuit_breaker_reset") {
+      setBreaker({ tripped: false });
+    }
     setSource("live");
   });
+
+  async function stopNow() {
+    setBreakerBusy(true);
+    try {
+      setBreaker(await api.tripBreaker());
+    } finally {
+      setBreakerBusy(false);
+    }
+  }
+
+  async function resume() {
+    setBreakerBusy(true);
+    try {
+      setBreaker(await api.resetBreaker());
+    } finally {
+      setBreakerBusy(false);
+    }
+  }
 
   const active = TABS.find((tab) => pathname.startsWith(tab.href))?.href;
 
@@ -95,8 +138,36 @@ export function ConsoleNav() {
           })}
         </nav>
 
+        <button
+          onClick={() => void (breaker?.tripped ? resume() : stopNow())}
+          disabled={breakerBusy}
+          data-cursor={breaker?.tripped ? "Resume" : "Stop"}
+          className="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors disabled:opacity-50"
+          style={
+            breaker?.tripped
+              ? { borderColor: "var(--color-blocked)", color: "var(--color-blocked)" }
+              : { borderColor: "var(--color-ink-rule)", color: "var(--color-ink-dim)" }
+          }
+        >
+          {breaker?.tripped ? "Resume" : "Stop"}
+        </button>
+
         <SourceBadge source={source} className="shrink-0" />
       </div>
+
+      {breaker?.tripped && (
+        <div
+          className="border-t px-4 py-2 text-sm md:px-8"
+          style={{ borderColor: "var(--color-blocked)", background: "color-mix(in srgb, var(--color-blocked) 16%, transparent)" }}
+        >
+          <span className="font-medium" style={{ color: "var(--color-blocked)" }}>
+            Circuit breaker tripped ({breaker.trippedBy === "auto" ? "automatic" : "manual"}):
+          </span>{" "}
+          <span className="text-[var(--color-ink-dim)]">{breaker.reason ?? "no reason recorded"}</span>
+          {" — "}
+          <span className="text-[var(--color-ink-dim)]">every new case is being stopped before diagnosis.</span>
+        </div>
+      )}
     </header>
   );
 }

@@ -86,11 +86,13 @@ export class SignalFeed {
       }
     }
 
-    // Time-based resolution (a promise whose due date has passed with no
-    // payment) needs wall-clock progress, not just a fresh signal — so
-    // this runs every tick, not only when something new was ingested.
-    // Grace is compressed relative to the 24h production default so a
-    // promise can actually be seen resolving within a live demo session.
+    // Time-based resolution (the RBI notice window, the retry itself, and
+    // a promise whose due date has passed with no payment) needs
+    // wall-clock progress, not just a fresh signal — so this runs every
+    // tick, not only when something new was ingested. Grace is compressed
+    // relative to the 24h production default so a promise can actually be
+    // seen resolving within a live demo session.
+    await this.state.processPromiseRetries(this.simMs);
     this.state.sweepPromises(this.simMs, 2 * 60 * 1000);
   }
 

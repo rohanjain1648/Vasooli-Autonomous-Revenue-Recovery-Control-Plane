@@ -53,6 +53,7 @@ function computeHash(
  */
 export class Ledger {
   private entries: LedgerEntry[] = [];
+  private demoTamperBackup: { index: number; entry: LedgerEntry } | null = null;
 
   append(
     input: LedgerEntryInput,
@@ -91,5 +92,43 @@ export class Ledger {
   /** Test-only helper to prove `verify()` catches tampering. Never called in production code paths. */
   _tamperForTest(index: number, patch: Partial<LedgerEntryInput>): void {
     this.entries[index] = { ...this.entries[index], ...patch };
+  }
+
+  /**
+   * Demo-only mutation, reachable from the dashboard's audit page: corrupts
+   * one stored entry's payload in place, breaking its hash and — because
+   * every downstream hash chains through it — every entry after it. Keeps a
+   * one-slot backup so `demoRestore()` can undo it exactly. Refuses a
+   * second tamper while one is already pending, since the backup only
+   * holds one entry: the point is proving the chain reacts, not building a
+   * general-purpose corruption tool.
+   */
+  demoTamper(index: number): { ok: true } | { ok: false; reason: string } {
+    if (index < 0 || index >= this.entries.length) {
+      return { ok: false, reason: `index ${index} out of range (0-${this.entries.length - 1})` };
+    }
+    if (this.demoTamperBackup) {
+      return { ok: false, reason: "an entry is already tampered — restore it first" };
+    }
+    const original = this.entries[index];
+    this.demoTamperBackup = { index, entry: original };
+    this.entries[index] = {
+      ...original,
+      payload: { ...original.payload, __demoTampered: true, __demoTamperedAt: Date.now() },
+    };
+    return { ok: true };
+  }
+
+  /** Undoes the one pending `demoTamper()`, if any. */
+  demoRestore(): { ok: boolean } {
+    if (!this.demoTamperBackup) return { ok: false };
+    this.entries[this.demoTamperBackup.index] = this.demoTamperBackup.entry;
+    this.demoTamperBackup = null;
+    return { ok: true };
+  }
+
+  /** The index currently tampered, or null if the chain is clean. */
+  demoTamperedIndex(): number | null {
+    return this.demoTamperBackup?.index ?? null;
   }
 }

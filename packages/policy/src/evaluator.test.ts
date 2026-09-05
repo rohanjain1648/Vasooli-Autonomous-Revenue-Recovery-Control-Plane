@@ -9,6 +9,8 @@ import {
   coolOffBetweenTouchesRule,
   hardStopRule,
   humanApprovalForHighRiskRule,
+  confidenceLadderRule,
+  preDebitNotificationRule,
 } from "./rules.js";
 import type { PolicyContext } from "./types.js";
 
@@ -136,6 +138,88 @@ describe("humanApprovalForHighRiskRule", () => {
 
   it("PASSes a normal action", () => {
     expect(rule.evaluate(makeContext({ isHighRiskAction: false }))).toBeNull();
+  });
+});
+
+describe("confidenceLadderRule", () => {
+  const rule = confidenceLadderRule(5);
+
+  it("does not apply when no bandit arm was involved (armTrials undefined)", () => {
+    expect(rule.evaluate(makeContext({ armTrials: undefined }))).toBeNull();
+  });
+
+  it("requires approval below the trial threshold", () => {
+    const ctx = makeContext({ armTrials: 2 });
+    const result = rule.evaluate(ctx);
+    expect(result?.decision).toBe("NEEDS_APPROVAL");
+    expect(result?.reason).toContain("2 resolved outcome");
+  });
+
+  it("requires approval at zero trials (a brand-new arm)", () => {
+    expect(rule.evaluate(makeContext({ armTrials: 0 }))?.decision).toBe("NEEDS_APPROVAL");
+  });
+
+  it("PASSes once the arm has reached the threshold", () => {
+    expect(rule.evaluate(makeContext({ armTrials: 5 }))).toBeNull();
+  });
+
+  it("PASSes comfortably past the threshold", () => {
+    expect(rule.evaluate(makeContext({ armTrials: 50 }))).toBeNull();
+  });
+
+  it("is absent from defaultRules() — opt-in only", () => {
+    const ids = defaultRules().map((r) => r.id);
+    expect(ids).not.toContain("confidence_ladder");
+  });
+});
+
+describe("preDebitNotificationRule", () => {
+  const HOUR = 60 * 60 * 1000;
+  const rule = preDebitNotificationRule(24 * HOUR);
+
+  it("does not apply to a normal (non-promise-retry) action", () => {
+    expect(rule.evaluate(makeContext({ isPromiseRetry: false }))).toBeNull();
+    expect(rule.evaluate(makeContext({}))).toBeNull();
+  });
+
+  it("BLOCKs a promise retry that was never notified", () => {
+    const result = rule.evaluate(makeContext({ isPromiseRetry: true }));
+    expect(result?.decision).toBe("BLOCK");
+    expect(result?.reason).toContain("No RBI pre-debit notice");
+  });
+
+  it("DEFERs a promise retry notified less than 24h ago", () => {
+    const ctx = makeContext({
+      isPromiseRetry: true,
+      nowMs: 10 * HOUR,
+      preDebitNoticeSentAtMs: 0,
+    });
+    const result = rule.evaluate(ctx);
+    expect(result?.decision).toBe("DEFER");
+    expect(result?.reason).toContain("RBI requires");
+  });
+
+  it("PASSes a promise retry notified exactly 24h ago", () => {
+    const ctx = makeContext({
+      isPromiseRetry: true,
+      nowMs: 24 * HOUR,
+      preDebitNoticeSentAtMs: 0,
+    });
+    expect(rule.evaluate(ctx)).toBeNull();
+  });
+
+  it("PASSes a promise retry notified well over 24h ago", () => {
+    const ctx = makeContext({
+      isPromiseRetry: true,
+      nowMs: 48 * HOUR,
+      preDebitNoticeSentAtMs: 0,
+    });
+    expect(rule.evaluate(ctx)).toBeNull();
+  });
+
+  it("is absent from defaultRules() — opt-in only", () => {
+    const ids = defaultRules().map((r) => r.id);
+    expect(ids).not.toContain("rbi_pre_debit_notice");
   });
 });
 

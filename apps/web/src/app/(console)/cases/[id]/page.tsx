@@ -376,6 +376,15 @@ function PromiseSection({
               <span className="text-[var(--color-ink-dim)]">by {formatDateTime(p.promisedForMs)}</span>
               <ChannelBadge channel={p.channel} />
               <PromiseStateBadge state={p.state} />
+              {p.retryAttemptedAt ? (
+                <span className="text-xs" style={{ color: "var(--color-recovered)" }}>
+                  retry attempted {formatDateTime(p.retryAttemptedAt)}
+                </span>
+              ) : p.notifiedAt ? (
+                <span className="text-xs" style={{ color: "var(--color-treatment)" }}>
+                  RBI notice sent {formatDateTime(p.notifiedAt)}
+                </span>
+              ) : null}
               {p.note && <span className="w-full text-xs text-[var(--color-ink-dim)]">{p.note}</span>}
             </li>
           ))}

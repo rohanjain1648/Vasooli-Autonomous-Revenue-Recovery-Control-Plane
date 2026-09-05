@@ -65,6 +65,8 @@ export default function AuditPage() {
   const [verifying, setVerifying] = useState(false);
   const [reachable, setReachable] = useState(true);
   const [loaded, setLoaded] = useState(false);
+  const [tamperBusy, setTamperBusy] = useState(false);
+  const [demoTamperedIndex, setDemoTamperedIndex] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -93,6 +95,31 @@ export default function AuditPage() {
     if (event.type !== "metrics_update") void load();
   });
 
+  async function breakAnEntry() {
+    setTamperBusy(true);
+    try {
+      const result = await api.tamperLedger();
+      setDemoTamperedIndex(result.index);
+      await load();
+    } catch {
+      // Nothing to tamper (empty ledger) or one is already tampered —
+      // either way the button below reflects the current state on reload.
+    } finally {
+      setTamperBusy(false);
+    }
+  }
+
+  async function restoreTheChain() {
+    setTamperBusy(true);
+    try {
+      await api.restoreLedger();
+      setDemoTamperedIndex(null);
+      await load();
+    } finally {
+      setTamperBusy(false);
+    }
+  }
+
   function exportLedger() {
     const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -112,12 +139,34 @@ export default function AuditPage() {
         sub="Every decision the agent made, hash-chained. This page re-computes the chain in your browser rather than trusting the API's answer."
         actions={
           entries.length > 0 ? (
-            <button
-              onClick={exportLedger}
-              className="rounded-full border border-[var(--color-ink-rule)] px-4 py-2 text-sm transition-colors hover:border-[var(--color-paper)]"
-            >
-              Export JSON
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {demoTamperedIndex !== null ? (
+                <button
+                  onClick={restoreTheChain}
+                  disabled={tamperBusy}
+                  className="rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{ borderColor: "var(--color-recovered)", color: "var(--color-recovered)" }}
+                >
+                  Restore chain
+                </button>
+              ) : (
+                <button
+                  onClick={breakAnEntry}
+                  disabled={tamperBusy}
+                  data-cursor="Break it"
+                  className="rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{ borderColor: "var(--color-blocked)", color: "var(--color-blocked)" }}
+                >
+                  Break an entry
+                </button>
+              )}
+              <button
+                onClick={exportLedger}
+                className="rounded-full border border-[var(--color-ink-rule)] px-4 py-2 text-sm transition-colors hover:border-[var(--color-paper)]"
+              >
+                Export JSON
+              </button>
+            </div>
           ) : undefined
         }
       />
@@ -189,7 +238,14 @@ export default function AuditPage() {
               </thead>
               <tbody>
                 {[...entries].reverse().map((entry) => (
-                  <tr key={entry.index}>
+                  <tr
+                    key={entry.index}
+                    style={
+                      entry.index === demoTamperedIndex
+                        ? { background: "color-mix(in srgb, var(--color-blocked) 18%, transparent)" }
+                        : undefined
+                    }
+                  >
                     <td className="figure text-xs text-[var(--color-ink-dim)]">{entry.index}</td>
                     <td className="figure text-xs text-[var(--color-ink-dim)]">
                       {formatDateTime(entry.timestamp)}

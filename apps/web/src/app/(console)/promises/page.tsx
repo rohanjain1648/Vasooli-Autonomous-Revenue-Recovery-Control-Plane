@@ -39,7 +39,13 @@ export default function PromisesPage() {
   }, [load]);
 
   useEngineEvents((event) => {
-    if (event.type === "promise_recorded" || event.type === "promise_resolved") void load();
+    if (
+      event.type === "promise_recorded" ||
+      event.type === "promise_resolved" ||
+      event.type === "promise_notice_sent"
+    ) {
+      void load();
+    }
   });
 
   return (
@@ -107,6 +113,7 @@ export default function PromisesPage() {
                 <th>Due</th>
                 <th>Channel</th>
                 <th>State</th>
+                <th>RBI notice</th>
                 <th>Logged</th>
               </tr>
             </thead>
@@ -141,6 +148,9 @@ export default function PromisesPage() {
                     <td>
                       <PromiseStateBadge state={p.state} />
                     </td>
+                    <td className="text-xs">
+                      <NoticeStatus notifiedAt={p.notifiedAt} retryAttemptedAt={p.retryAttemptedAt} />
+                    </td>
                     <td className="figure text-xs text-[var(--color-ink-dim)]">
                       {formatDateTime(p.createdAt)}
                     </td>
@@ -153,6 +163,28 @@ export default function PromisesPage() {
       )}
     </PageIn>
   );
+}
+
+/** "She said Tuesday. We notify Monday, because RBI says so. We charge
+ * Tuesday. Not before, not after." — this is the one place that trail is
+ * visible end to end: no notice yet, notice sent (retry still waiting out
+ * the mandatory window), or the retry already fired. */
+function NoticeStatus({ notifiedAt, retryAttemptedAt }: { notifiedAt?: string; retryAttemptedAt?: string }) {
+  if (retryAttemptedAt) {
+    return (
+      <span style={{ color: "var(--color-recovered)" }}>
+        Retried {formatDateTime(retryAttemptedAt)}
+      </span>
+    );
+  }
+  if (notifiedAt) {
+    return (
+      <span style={{ color: "var(--color-treatment)" }}>
+        Notified {formatDateTime(notifiedAt)}
+      </span>
+    );
+  }
+  return <span className="text-[var(--color-ink-dim)]">—</span>;
 }
 
 function Chip({

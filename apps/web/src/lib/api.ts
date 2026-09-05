@@ -109,11 +109,22 @@ export interface PromiseView {
   channel: PromiseChannel;
   state: PromiseState;
   note?: string;
+  notifiedAt?: string;
+  retryAttemptedAt?: string;
   createdAt: string;
   updatedAt: string;
   category?: string;
   entityId?: string;
   caseState?: string;
+}
+
+export interface CircuitBreakerStatus {
+  tripped: boolean;
+  trippedAt?: number;
+  trippedBy?: "auto" | "manual";
+  reason?: string;
+  pValue?: number;
+  diff?: number;
 }
 
 export interface PromisesSummary {
@@ -157,4 +168,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  breaker: () => request<CircuitBreakerStatus>("/api/breaker"),
+  tripBreaker: () => request<CircuitBreakerStatus>("/api/breaker/trip", { method: "POST" }),
+  resetBreaker: () => request<CircuitBreakerStatus>("/api/breaker/reset", { method: "POST" }),
+  tamperLedger: (index?: number) =>
+    request<{ ok: true; index: number }>("/api/audit/tamper", {
+      method: "POST",
+      body: JSON.stringify({ index }),
+    }),
+  restoreLedger: () => request<{ ok: boolean }>("/api/audit/restore", { method: "POST" }),
 };
